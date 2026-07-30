@@ -85,7 +85,7 @@ function setFilter(source) {
 
 function render(entries) {
   const el = document.getElementById('entries');
-  el.innerHTML = entries.slice(0, 48).map(e => {
+  el.innerHTML = entries.slice(0, 100).map(e => {
     const src = extractImg(e);
     return `<div class="card" data-color="?" data-id="${e._id}" data-source="${e._source}" onclick="openModal(this)">
       <div class="card-inner">
@@ -103,8 +103,8 @@ function render(entries) {
     </div>`;
   }).join('');
   document.getElementById('loader').classList.add('hide');
-  const total = Math.min(entries.length, 48);
-  const colossal = entries.slice(0, 48).filter(e => e._source === 'colossal').length;
+    const total = Math.min(entries.length, 100);
+  const colossal = entries.slice(0, 100).filter(e => e._source === 'colossal').length;
   const lomo = total - colossal;
   document.getElementById('count-colossal').textContent = `Colossal ${colossal}`;
   document.getElementById('count-lomography').textContent = `Lomography ${lomo}`;
