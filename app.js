@@ -5,13 +5,14 @@ document.addEventListener('DOMContentLoaded', () => {
   loadFeeds();
   document.getElementById('count-colossal').addEventListener('click', () => setFilter('colossal'));
   document.getElementById('count-lomography').addEventListener('click', () => setFilter('lomography'));
+  document.getElementById('count-booooooom').addEventListener('click', () => setFilter('booooooom'));
 });
 
 let __activeFilter = null;
 
 async function loadFeeds() {
-  const [colossal, lomo] = await Promise.all([fetchColossal(), fetchLomography()]);
-  window.__allEntries = [...colossal, ...lomo].sort((a, b) => (b._parsedDate || 0) - (a._parsedDate || 0));
+  const [colossal, lomo, boom] = await Promise.all([fetchColossal(), fetchLomography(), fetchBooooooom()]);
+  window.__allEntries = [...colossal, ...lomo, ...boom].sort((a, b) => (b._parsedDate || 0) - (a._parsedDate || 0));
   if (!window.__allEntries.length) { showEmpty(); return; }
   applyFilter();
 }
@@ -65,6 +66,34 @@ function normalizeLomo(items) {
   }));
 }
 
+async function fetchBooooooom() {
+  // Try live API first (VPS mode)
+  try {
+    const resp = await fetch('/api/booooooom');
+    const data = await resp.json();
+    if (data && data.status === 'ok' && data.items.length) return normalizeBoom(data.items);
+  } catch {}
+  // Fallback: static JSON (GitHub Pages)
+  try {
+    const resp = await fetch('booooooom.json');
+    const data = await resp.json();
+    if (data && data.items) return normalizeBoom(data.items);
+  } catch {}
+  return [];
+}
+
+function normalizeBoom(items) {
+  return items.map(i => ({
+    _source: 'booooooom',
+    _id: i.link || i._id,
+    _parsedDate: (i.date || i._parsedDate) ? new Date(i.date || i._parsedDate) : null,
+    link: i.link,
+    title: i.title,
+    content: i.content || i.excerpt,
+    thumbnail: i.thumbnail
+  }));
+}
+
 function extractImg(post) {
   if (post.thumbnail) return post.thumbnail;
   const m = (post.content || '').match(/<img[^>]+src=["']([^"']+)["']/);
@@ -76,6 +105,7 @@ function applyFilter() {
   render(entries);
   document.getElementById('count-colossal').classList.toggle('active', __activeFilter === 'colossal');
   document.getElementById('count-lomography').classList.toggle('active', __activeFilter === 'lomography');
+  document.getElementById('count-booooooom').classList.toggle('active', __activeFilter === 'booooooom');
 }
 
 function setFilter(source) {
@@ -94,7 +124,7 @@ function render(entries) {
         <div class="card-overlay"></div>
       </div>
       <div class="card-info">
-        <div class="card-source">${e._source === 'lomography' ? 'Lomography Magazine' : 'Colossal · Fotografía'}</div>
+        <div class="card-source">${e._source === 'lomography' ? 'Lomography Magazine' : e._source === 'booooooom' ? 'Booooooom' : 'Colossal · Fotografía'}</div>
         <div class="card-title"><a href="${e.link}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${e.title}</a></div>
         <div class="card-meta">
           <span class="card-date">${e._parsedDate ? fmtDate(e._parsedDate) : ''}</span>
@@ -105,9 +135,11 @@ function render(entries) {
   document.getElementById('loader').classList.add('hide');
     const total = Math.min(entries.length, 100);
   const colossal = entries.slice(0, 100).filter(e => e._source === 'colossal').length;
-  const lomo = total - colossal;
+  const lomo = entries.slice(0, 100).filter(e => e._source === 'lomography').length;
+  const boom = total - colossal - lomo;
   document.getElementById('count-colossal').textContent = `Colossal ${colossal}`;
   document.getElementById('count-lomography').textContent = `Lomography ${lomo}`;
+  document.getElementById('count-booooooom').textContent = `Booooooom ${boom}`;
   document.getElementById('footer-info').textContent = total + ' fotografías';
 }
 
