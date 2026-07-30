@@ -1,0 +1,6 @@
+node_modules/
+__pycache__/
+.firecrawl/
+resumenes/digest-*.txt
+resumenes/podcast-*.mp3
+config.json

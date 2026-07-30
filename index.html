@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>feed·foto</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+      <span class="logo" onclick="toggleFullscreen()" style="cursor:pointer">⌥ feed·foto</span>
+    <div class="header-controls">
+      <span id="count-colossal" class="pill">Colossal 0</span>
+      <span id="count-lomography" class="pill">Lomography 0</span>
+    </div>
+  </div>
+</header>
+
+<div id="loader">⌥ cargando feed…</div>
+<div id="empty" class="hide">sin entradas</div>
+<main id="entries"></main>
+
+<div id="modal" class="hide">
+  <div id="modal-backdrop"></div>
+  <div id="modal-panel">
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<footer>
+  <span>colossal · fotografía</span>
+  <span id="footer-info"></span>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

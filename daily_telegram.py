@@ -1,0 +1,221 @@
+import json
+import os
+import re
+import subprocess
+import time
+import urllib.request
+from datetime import date, datetime
+from pathlib import Path
+
+import requests
+
+DIR = os.path.dirname(os.path.abspath(__file__))
+OUT_DIR = os.path.join(DIR, 'resumenes')
+
+CONFIG = json.load(open(os.path.join(DIR, 'config.json')))
+TG_TOKEN = CONFIG['TG_TOKEN']
+TG_CHAT_ID = CONFIG['TG_CHAT_ID']
+GEMINI_KEY = CONFIG['GEMINI_KEY']
+GEMINI_MODEL = 'gemini-3-flash-preview'
+GEMINI_URL = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_KEY}'
+
+MAX_RETRIES = 5
+RETRY_DELAY = 15
+
+
+def find_latest_podcast():
+    files = sorted(Path(OUT_DIR).glob('*.podcast.md'), reverse=True)
+    return files[0] if files else None
+
+
+def gemini_request(prompt):
+    body = {
+        'contents': [{'parts': [{'text': prompt}]}],
+        'generationConfig': {
+            'temperature': 0.7,
+            'maxOutputTokens': 2048,
+        }
+    }
+    data = json.dumps(body).encode()
+    req = urllib.request.Request(GEMINI_URL, data=data,
+                                 headers={'Content-Type': 'application/json'},
+                                 method='POST')
+    for attempt in range(MAX_RETRIES):
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                result = json.loads(resp.read())
+            text = result['candidates'][0]['content']['parts'][0]['text']
+            return text.strip()
+        except urllib.error.HTTPError as e:
+            err = e.read().decode()
+            if 'quota' in err.lower() or 'RESOURCE_EXHAUSTED' in err:
+                wait = RETRY_DELAY * (attempt + 1)
+                print(f'  Cuota excedida, reintentando en {wait}s...')
+                time.sleep(wait)
+                continue
+            print(f'  Error API: {err[:300]}')
+            return None
+        except (urllib.error.URLError, json.JSONDecodeError, KeyError) as e:
+            print(f'  Error: {e}')
+            return None
+    print('  Se agotaron los reintentos por cuota.')
+    return None
+
+
+def send_telegram(text, parse_mode='HTML'):
+    url = f'https://api.telegram.org/bot{TG_TOKEN}/sendMessage'
+    try:
+        resp = requests.post(url, json={
+            'chat_id': TG_CHAT_ID,
+            'text': text,
+            'parse_mode': parse_mode,
+            'disable_web_page_preview': True
+        }, timeout=30)
+        return resp.json()
+    except requests.RequestException as e:
+        print(f'  Error Telegram: {e}')
+        return None
+
+
+def send_telegram_audio(audio_path, caption=''):
+    url = f'https://api.telegram.org/bot{TG_TOKEN}/sendAudio'
+    try:
+        with open(audio_path, 'rb') as f:
+            files = {'audio': ('podcast.mp3', f, 'audio/mpeg')}
+            data = {'chat_id': TG_CHAT_ID}
+            if caption:
+                data['caption'] = caption
+            resp = requests.post(url, data=data, files=files, timeout=120)
+            return resp.json()
+    except requests.RequestException as e:
+        print(f'  Error Telegram audio: {e}')
+        return None
+
+
+def generate_audio(text, out_path):
+    try:
+        subprocess.run([
+            'edge-tts',
+            '--voice', 'es-ES-ElviraNeural',
+            '--text', text,
+            '--write-media', out_path
+        ], check=True, capture_output=True, text=True, timeout=120)
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f'  Error edge-tts: {e.stderr[:300]}')
+        return False
+    except FileNotFoundError:
+        print('  edge-tts no instalado')
+        return False
+
+
+def clean_text(t):
+    t = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF'
+               r'\U0001F1E0-\U0001F1FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F'
+               r'\U0001FA70-\U0001FAFF\u2702-\u27B0\u24C2-\U0001F251'
+               r'\U0001F004\u2600-\u26FF\uFE0F]', '', t)
+    t = re.sub(r'!\[[^\]]*\]\([^)]+\)', '', t)
+    t = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', t)
+    t = re.sub(r'<\/?[^>]+>', '', t)
+    t = re.sub(r'\*\*(.+?)\*\*', r'\1', t)
+    t = re.sub(r'\*(.+?)\*', r'\1', t)
+    t = re.sub(r'[_*~`]', '', t)
+    t = re.sub(r'\s+', ' ', t).strip()
+    t = re.sub(r'&#8217;', "'", t)
+    t = re.sub(r'&#8211;', '–', t)
+    t = re.sub(r'&#\d+;', '', t)
+    t = t.replace('\\', '')
+    t = re.sub(r'\|', ', ', t)
+    return t
+
+
+LOCUTABLE_MARKER = '---LOCUTABLE---'
+
+def build_summary_prompt(podcast_content):
+    today = date.today().isoformat()
+    return f"""Hoy es {today}. A continuación tienes el texto completo de varios artículos de fotografía.
+
+{podcast_content}
+
+Escribe tu respuesta en DOS secciones separadas por esta línea exacta: {LOCUTABLE_MARKER}
+
+PRIMERA SECCIÓN - Solo los resúmenes para redes sociales, con este formato exacto:
+- Sin introducciones, sin títulos de programa, sin despedidas, sin notas.
+- Por cada artículo: pon el título en negrita **Título** y debajo 2-3 frases de resumen atractivas en español.
+- Los resúmenes deben sonar amenos e inspiradores, como para leerlos en una red social.
+
+SEGUNDA SECCIÓN (solo el texto locutable para el audio del podcast):
+- El guion de radio en español, tono natural y cercano.
+- Debe sonar bien al leerlo en voz alta.
+- Empieza directo con el saludo: "¡Hola, muy buenas!".
+- Termina con "¡Nos escuchamos mañana!".
+- Sin títulos, sin etiquetas, sin resúmenes, solo la locución."""
+
+
+def main():
+    os.makedirs(OUT_DIR, exist_ok=True)
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    today = date.today()
+    print(f'[{ts}] daily_telegram · {today}')
+
+    podcast_file = find_latest_podcast()
+    if not podcast_file:
+        print('  No hay archivo .podcast.md')
+        return
+
+    print(f'  Leyendo: {podcast_file.name}')
+    content = podcast_file.read_text(encoding='utf-8')
+
+    print('  Enviando a Gemini...')
+    prompt = build_summary_prompt(content)
+    summary = gemini_request(prompt)
+
+    if not summary:
+        print('  No se obtuvo respuesta de Gemini.')
+        return
+
+    print(f'  Resumen generado ({len(summary)} chars)')
+
+    header = f'📸 <b>Feed·Foto</b> · {today.strftime("%d %b %Y")}\n\n'
+
+    locutable = summary
+    parts = summary.split(LOCUTABLE_MARKER, 1)
+    if len(parts) == 2:
+        locutable = parts[1].strip()
+        full_msg = header + parts[0].strip()
+    else:
+        full_msg = header + summary
+
+    if len(full_msg) > 4000:
+        full_msg = full_msg[:3997] + '...'
+
+    print('  Enviando texto a Telegram...')
+    result = send_telegram(full_msg)
+    if result and result.get('ok'):
+        print('  ✅ Texto enviado')
+    else:
+        err = result.get('description', '?') if result else '?'
+        print(f'  ❌ Error al enviar texto: {err}')
+
+    print('  Generando audio...')
+    clean_text_audio = clean_text(locutable)
+    if not clean_text_audio:
+        print('  ❌ No hay texto locutable para audio')
+        return
+    audio_path = os.path.join(OUT_DIR, f'podcast-{today.isoformat()}.mp3')
+    if generate_audio(clean_text_audio, audio_path):
+        size = os.path.getsize(audio_path)
+        print(f'  Audio generado ({size/1024:.0f} KB)')
+        print('  Enviando audio a Telegram...')
+        result = send_telegram_audio(audio_path, header.strip())
+        if result and result.get('ok'):
+            print('  ✅ Audio enviado')
+        else:
+            err = result.get('description', '?') if result else '?'
+            print(f'  ❌ Error al enviar audio: {err}')
+    else:
+        print('  ❌ Error al generar audio')
+
+
+if __name__ == '__main__':
+    main()
