@@ -142,7 +142,7 @@ def resolve_lomo_profile(url):
             capture_output=True, text=True, timeout=30, cwd=DIR
         )
         md = result.stdout or result.stderr
-                idx = re.search(r'## (?:One|\d+) Likes?|## No Comments|Please login to leave a comment|More Interesting Articles', md)
+        idx = re.search(r'## (?:One|\d+) Likes?|## No Comments|Please login to leave a comment|More Interesting Articles', md)
         if idx:
             md = md[:idx.start()]
         links = SOCIAL_RE.findall(md)
@@ -194,7 +194,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     capture_output=True, text=True, timeout=60, cwd=DIR
                 )
                 md = result.stdout or result.stderr
-        idx = re.search(r'## (?:One|\d+) Likes?|## No Comments|Please login to leave a comment|More Interesting Articles', md)
+                idx = re.search(r'## (?:One|\d+) Likes?|## No Comments|Please login to leave a comment|More Interesting Articles', md)
                 clean_md = md[:idx.start()] if idx else md
                 images = [{'url': m.group(2), 'alt': m.group(1)} for m in re.finditer(r'!\[([^\]]*)\]\(([^)]+)\)', clean_md)]
                 body_md = re.split(r'\nwritten by\b', clean_md, maxsplit=1)[0] if re.search(r'\nwritten by\b', clean_md) else clean_md
