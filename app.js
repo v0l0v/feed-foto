@@ -38,16 +38,29 @@ async function fetchColossal() {
 }
 
 async function fetchLomography() {
-  let data;
-  try { data = await (await fetch('/api/lomography')).json(); } catch {}
-  if (!data || data.status !== 'ok') return [];
-  return data.items.map(i => ({
+  // Try live API first (VPS mode)
+  try {
+    const resp = await fetch('/api/lomography');
+    const data = await resp.json();
+    if (data && data.status === 'ok' && data.items.length) return normalizeLomo(data.items);
+  } catch {}
+  // Fallback: static JSON (GitHub Pages)
+  try {
+    const resp = await fetch('lomography.json');
+    const data = await resp.json();
+    if (data && data.items) return normalizeLomo(data.items);
+  } catch {}
+  return [];
+}
+
+function normalizeLomo(items) {
+  return items.map(i => ({
     _source: 'lomography',
-    _id: i.link,
-    _parsedDate: i.date ? new Date(i.date) : null,
+    _id: i.link || i._id,
+    _parsedDate: (i.date || i._parsedDate) ? new Date(i.date || i._parsedDate) : null,
     link: i.link,
     title: i.title,
-    content: i.excerpt,
+    content: i.content || i.excerpt,
     thumbnail: i.thumbnail
   }));
 }
