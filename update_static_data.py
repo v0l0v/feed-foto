@@ -28,6 +28,7 @@ TPJ_URLS = [
     'https://thephotographicjournal.com/features/feed',
 ]
 SWAN_URL = 'https://www.swanngalleries.com/news/category/photographs-and-photobooks/feed'
+HUCK_URL = 'https://www.huckmag.com/topic/photography/feed'
 
 
 def fetch_colossal():
@@ -123,7 +124,7 @@ def fetch_rss(url, source, include_content=False, fetch_page_fallback=True):
     articles = []
     seen = set()
     try:
-        root = ET.fromstring(xml_data)
+        root = ET.fromstring(xml_data.lstrip())
         for item in root.iter('item'):
             title = ''
             link = ''
@@ -233,6 +234,10 @@ def fetch_swan():
     return fetch_rss(SWAN_URL, 'swan')
 
 
+def fetch_huck():
+    return fetch_rss(HUCK_URL, 'huck', include_content=True, fetch_page_fallback=False)
+
+
 def load_previous_items(filename):
     try:
         with open(os.path.join(DIR, filename)) as f:
@@ -334,17 +339,23 @@ def main():
         swan = load_previous_items('swan.json')
     print(f'     {len(swan)} artículos')
 
-    print('  6. Lomography articles (cache GitHub Pages)...')
+    print('  6. Huck Magazine...')
+    huck = fetch_huck()
+    if not huck:
+        huck = load_previous_items('huck.json')
+    print(f'     {len(huck)} artículos')
+
+    print('  7. Lomography articles (cache GitHub Pages)...')
     purge_bad_articles('lomography_articles.json')
     new_articles = update_lomography_articles(lomo)
     print(f'     {new_articles} nuevos | {len(load_article_cache("lomography_articles.json"))} en cache')
 
-    print('  7. Booooooom articles (cache GitHub Pages)...')
+    print('  8. Booooooom articles (cache GitHub Pages)...')
     purge_bad_articles('booooooom_articles.json')
     new_boom_articles = update_booooooom_articles(boom)
     print(f'     {new_boom_articles} nuevos | {len(load_article_cache("booooooom_articles.json"))} en cache')
 
-    print('  8. Swann articles (cache GitHub Pages)...')
+    print('  9. Swann articles (cache GitHub Pages)...')
     purge_bad_articles('swan_articles.json')
     new_swan_articles = update_swan_articles(swan)
     swan_cache = load_article_cache('swan_articles.json')
@@ -355,7 +366,7 @@ def main():
         if isinstance(data, dict) and data.get('thumbnail'):
             item['thumbnail'] = data['thumbnail']
 
-    all_entries = sorted(colossal + lomo + boom + tpj + swan,
+    all_entries = sorted(colossal + lomo + boom + tpj + swan + huck,
                          key=lambda x: x.get('_parsedDate') or x.get('date') or '',
                          reverse=True)
 
@@ -371,15 +382,18 @@ def main():
     with open(os.path.join(DIR, 'swan.json'), 'w') as f:
         json.dump({'items': swan, 'count': len(swan), 'updated': ts}, f)
 
+    with open(os.path.join(DIR, 'huck.json'), 'w') as f:
+        json.dump({'items': huck, 'count': len(huck), 'updated': ts}, f)
+
     with open(os.path.join(DIR, 'feeds.json'), 'w') as f:
         json.dump({'items': all_entries, 'count': len(all_entries), 'updated': ts}, f)
 
-    print(f'  Guardado: lomography.json, booooooom.json, tpj.json, swan.json, feeds.json ({len(all_entries)} total)')
+    print(f'  Guardado: lomography.json, booooooom.json, tpj.json, swan.json, huck.json, feeds.json ({len(all_entries)} total)')
 
-    print('  9. Subiendo a GitHub...')
+    print('  10. Subiendo a GitHub...')
     try:
         result = subprocess.run(
-            ['git', 'add', 'lomography.json', 'booooooom.json', 'tpj.json', 'swan.json', 'feeds.json',
+            ['git', 'add', 'lomography.json', 'booooooom.json', 'tpj.json', 'swan.json', 'huck.json', 'feeds.json',
              'lomography_articles.json', 'booooooom_articles.json', 'swan_articles.json'],
             capture_output=True, text=True, cwd=DIR
         )
