@@ -2,13 +2,14 @@ import json
 import os
 import re
 import subprocess
+import time
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import date, datetime
 from pathlib import Path
 from html import unescape
 
-from server import scrape_lomography_article, scrape_booooooom_article
+from server import firecrawl_scrape, resolve_lomo_article_date, scrape_lomography_article, scrape_booooooom_article
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -43,14 +44,8 @@ def fetch_colossal():
 
 
 def fetch_lomography():
-    try:
-        result = subprocess.run(
-            ['firecrawl', 'scrape', LOMO_URL, '--only-main-content'],
-            capture_output=True, text=True, timeout=60, cwd=DIR
-        )
-        md = result.stdout or result.stderr
-    except Exception as e:
-        print(f'  Error Firecrawl: {e}')
+    md = firecrawl_scrape(LOMO_URL, timeout=60)
+    if not md:
         return []
 
     articles = []
@@ -73,6 +68,8 @@ def fetch_lomography():
         dm = re.search(r'\b(20\d{2}-\d{2}-\d{2})\b', block)
         if dm:
             date_str = dm.group(1)
+        else:
+            date_str = resolve_lomo_article_date(url) or ''
 
         thumb = ''
         tm = re.search(r'\[!\[.*?\]\(([^)]+)\)\]', block)
@@ -216,10 +213,14 @@ def load_article_cache(filename):
 def update_article_cache(filename, items, scrape_fn):
     cache = load_article_cache(filename)
     new = 0
+    attempts = 0
     for item in items:
         url = item.get('link')
         if not url or url in cache:
             continue
+        if attempts:
+            time.sleep(7)
+        attempts += 1
         data = scrape_fn(url)
         if data and data.get('status') == 'ok':
             cache[url] = data
@@ -231,6 +232,19 @@ def update_article_cache(filename, items, scrape_fn):
         with open(os.path.join(DIR, filename), 'w') as f:
             json.dump({'updated': date.today().isoformat(), 'articles': cache}, f, ensure_ascii=False)
     return new
+
+
+def purge_bad_articles(filename):
+    cache = load_article_cache(filename)
+    bad = [url for url, data in cache.items()
+           if isinstance(data, dict) and 'Rate limit exceeded' in str(data.get('content', ''))]
+    if bad:
+        for url in bad:
+            del cache[url]
+        with open(os.path.join(DIR, filename), 'w') as f:
+            json.dump({'updated': date.today().isoformat(), 'articles': cache}, f, ensure_ascii=False)
+        print(f'    {len(bad)} artículos con error purgados de {filename}')
+    return len(bad)
 
 
 def update_lomography_articles(items):
@@ -263,10 +277,12 @@ def main():
     print(f'     {len(boom)} artículos')
 
     print('  4. Lomography articles (cache GitHub Pages)...')
+    purge_bad_articles('lomography_articles.json')
     new_articles = update_lomography_articles(lomo)
     print(f'     {new_articles} nuevos | {len(load_article_cache("lomography_articles.json"))} en cache')
 
     print('  5. Booooooom articles (cache GitHub Pages)...')
+    purge_bad_articles('booooooom_articles.json')
     new_boom_articles = update_booooooom_articles(boom)
     print(f'     {new_boom_articles} nuevos | {len(load_article_cache("booooooom_articles.json"))} en cache')
 

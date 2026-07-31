@@ -11,6 +11,33 @@ PORT = 8080
 DIR = os.path.dirname(os.path.abspath(__file__))
 CACHE = {'data': None, 'time': 0, 'ttl': 120}
 
+
+def is_rate_limited(text):
+    return 'rate limit exceeded' in (text or '').lower()
+
+
+def firecrawl_scrape(url, timeout=60, retries=2):
+    for attempt in range(retries + 1):
+        try:
+            result = subprocess.run(
+                ['firecrawl', 'scrape', url, '--only-main-content'],
+                capture_output=True, text=True, timeout=timeout, cwd=DIR
+            )
+        except subprocess.TimeoutExpired:
+            return None
+        except Exception:
+            return None
+        md = result.stdout or result.stderr
+        if not md:
+            return None
+        if is_rate_limited(md):
+            if attempt < retries:
+                time.sleep(10)
+                continue
+            return None
+        return md
+    return None
+
 def parse_lomo_articles(md):
     articles = []
     seen = set()
@@ -32,6 +59,8 @@ def parse_lomo_articles(md):
         dm = re.search(r'\b(20\d{2}-\d{2}-\d{2})\b', block)
         if dm:
             date = dm.group(1)
+        else:
+            date = resolve_lomo_article_date(url) or ''
 
         thumb = ''
         tm = re.search(r'\[!\[.*?\]\(([^)]+)\)\]', block)
@@ -61,15 +90,31 @@ def parse_lomo_articles(md):
 
     return articles[:50]
 
+LOMO_ARTICLE_DATE_CACHE = {}
+
+def resolve_lomo_article_date(url):
+    if url in LOMO_ARTICLE_DATE_CACHE:
+        return LOMO_ARTICLE_DATE_CACHE[url]
+    md = firecrawl_scrape(url, timeout=60)
+    if not md:
+        LOMO_ARTICLE_DATE_CACHE[url] = None
+        return None
+    idx = re.search(r'## (?:One|\d+) Likes?|## No Comments|Please login to leave a comment|More Interesting Articles', md)
+    clean = md[:idx.start()] if idx else md
+    m = re.search(r'\bwritten by\b[^\n]*?\bon\s+(\d{4}-\d{2}-\d{2})', clean, re.IGNORECASE)
+    if m:
+        LOMO_ARTICLE_DATE_CACHE[url] = m.group(1)
+        return m.group(1)
+    m = re.search(r'\b(20\d{2}-\d{2}-\d{2})\b', clean)
+    LOMO_ARTICLE_DATE_CACHE[url] = m.group(1) if m else None
+    return LOMO_ARTICLE_DATE_CACHE[url]
+
 def scrape_lomography():
     now = time.time()
     if CACHE['data'] and now - CACHE['time'] < CACHE['ttl']:
         return CACHE['data']
-    result = subprocess.run(
-        ['firecrawl', 'scrape', 'https://www.lomography.com/magazine/', '--only-main-content'],
-        capture_output=True, text=True, timeout=60, cwd=DIR
-    )
-    articles = parse_lomo_articles(result.stdout or result.stderr)
+    md = firecrawl_scrape('https://www.lomography.com/magazine/', timeout=60)
+    articles = parse_lomo_articles(md or '')
     CACHE['data'] = articles
     CACHE['time'] = now
     return articles
@@ -150,23 +195,19 @@ def resolve_lomo_profile(url):
     now = time.time()
     if url in LOMO_PROFILE_CACHE and now - LOMO_PROFILE_CACHE[url]['time'] < 3600:
         return LOMO_PROFILE_CACHE[url]['data']
-    try:
-        result = subprocess.run(
-            ['firecrawl', 'scrape', url, '--only-main-content'],
-            capture_output=True, text=True, timeout=30, cwd=DIR
-        )
-        md = result.stdout or result.stderr
-        idx = re.search(r'## (?:One|\d+) Likes?|## No Comments|Please login to leave a comment|More Interesting Articles', md)
-        if idx:
-            md = md[:idx.start()]
-        links = SOCIAL_RE.findall(md)
-        links.sort(key=lambda x: (0 if 'instagram.com' in x[1].lower() else 1))
-        if links:
-            social = {'name': links[0][0], 'url': links[0][1]}
-            LOMO_PROFILE_CACHE[url] = {'data': social, 'time': now}
-            return social
-    except:
-        pass
+    md = firecrawl_scrape(url, timeout=30)
+    if not md:
+        LOMO_PROFILE_CACHE[url] = {'data': None, 'time': now}
+        return None
+    idx = re.search(r'## (?:One|\d+) Likes?|## No Comments|Please login to leave a comment|More Interesting Articles', md)
+    if idx:
+        md = md[:idx.start()]
+    links = SOCIAL_RE.findall(md)
+    links.sort(key=lambda x: (0 if 'instagram.com' in x[1].lower() else 1))
+    if links:
+        social = {'name': links[0][0], 'url': links[0][1]}
+        LOMO_PROFILE_CACHE[url] = {'data': social, 'time': now}
+        return social
     LOMO_PROFILE_CACHE[url] = {'data': None, 'time': now}
     return None
 
@@ -194,16 +235,7 @@ def scrape_booooooom_article(url):
     now = time.time()
     if url in BOOM_ARTICLE_CACHE and now - BOOM_ARTICLE_CACHE[url]['time'] < 300:
         return BOOM_ARTICLE_CACHE[url]['data']
-    try:
-        result = subprocess.run(
-            ['firecrawl', 'scrape', url, '--only-main-content'],
-            capture_output=True, text=True, timeout=60, cwd=DIR
-        )
-        md = result.stdout or result.stderr
-    except subprocess.TimeoutExpired:
-        return None
-    except Exception:
-        return None
+    md = firecrawl_scrape(url, timeout=60)
     if not md:
         return None
 
@@ -261,16 +293,7 @@ def scrape_lomography_article(url, resolve_profiles=True):
     now = time.time()
     if url in ARTICLE_CACHE and now - ARTICLE_CACHE[url]['time'] < 300:
         return ARTICLE_CACHE[url]['data']
-    try:
-        result = subprocess.run(
-            ['firecrawl', 'scrape', url, '--only-main-content'],
-            capture_output=True, text=True, timeout=60, cwd=DIR
-        )
-        md = result.stdout or result.stderr
-    except subprocess.TimeoutExpired:
-        return None
-    except Exception:
-        return None
+    md = firecrawl_scrape(url, timeout=60)
     if not md:
         return None
     idx = re.search(r'## (?:One|\d+) Likes?|## No Comments|Please login to leave a comment|More Interesting Articles', md)

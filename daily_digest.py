@@ -1,9 +1,10 @@
 import json
 import os
 import re
-import subprocess
 import urllib.request
 from datetime import date, datetime
+
+from server import firecrawl_scrape, resolve_lomo_article_date
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.join(DIR, 'resumenes')
@@ -82,13 +83,8 @@ def process_colossal(post):
     }
 
 def fetch_lomography_articles():
-    try:
-        result = subprocess.run(
-            ['firecrawl', 'scrape', 'https://www.lomography.com/magazine/', '--only-main-content'],
-            capture_output=True, text=True, timeout=60, cwd=DIR
-        )
-        md = result.stdout or result.stderr
-    except:
+    md = firecrawl_scrape('https://www.lomography.com/magazine/', timeout=60)
+    if not md:
         return []
     articles = []
     seen = set()
@@ -103,9 +99,12 @@ def fetch_lomography_articles():
         seen.add(key)
         block = md[m.start():matches[i + 1].start() if i + 1 < len(matches) else len(md)]
         dm = re.search(r'\b(20\d{2}-\d{2}-\d{2})\b', block)
-        if not dm or dm.group(1) != TODAY.isoformat():
+        if dm:
+            date_str = dm.group(1)
+        else:
+            date_str = resolve_lomo_article_date(url)
+        if not date_str or date_str != TODAY.isoformat():
             continue
-        date_str = dm.group(1)
         excerpt_lines = []
         for line in block.split('\n'):
             s = line.strip()
@@ -129,13 +128,8 @@ def fetch_lomography_articles():
     return articles
 
 def fetch_lomo_article_content(url):
-    try:
-        result = subprocess.run(
-            ['firecrawl', 'scrape', url, '--only-main-content'],
-            capture_output=True, text=True, timeout=45, cwd=DIR
-        )
-        md = result.stdout or result.stderr
-    except:
+    md = firecrawl_scrape(url, timeout=45)
+    if not md:
         return None, [], []
     idx = re.search(r'## (?:One|\d+) Likes?|## No Comments|Please login to leave a comment|More Interesting Articles', md)
     clean_md = md[:idx.start()] if idx else md
