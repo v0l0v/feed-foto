@@ -9,9 +9,15 @@ from datetime import date, datetime
 from pathlib import Path
 from html import unescape
 
-from server import firecrawl_scrape, resolve_lomo_article_date, scrape_lomography_article, scrape_booooooom_article
+from server import firecrawl_scrape, resolve_lomo_article_date, scrape_lomography_article, scrape_booooooom_article, scrape_swan_article
 
 DIR = os.path.dirname(os.path.abspath(__file__))
+
+RSS_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'application/rss+xml, application/xml;q=0.9, */*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+}
 
 WP_API = 'https://www.thisiscolossal.com/wp-json/wp/v2/posts?categories=496&per_page=20'
 LOMO_URL = 'https://www.lomography.com/magazine/'
@@ -21,6 +27,7 @@ TPJ_URLS = [
     'https://thephotographicjournal.com/interviews/feed',
     'https://thephotographicjournal.com/features/feed',
 ]
+SWAN_URL = 'https://www.swanngalleries.com/news/category/photographs-and-photobooks/feed'
 
 
 def fetch_colossal():
@@ -106,7 +113,7 @@ def fetch_lomography():
 
 def fetch_rss(url, source, include_content=False, fetch_page_fallback=True):
     try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        req = urllib.request.Request(url, headers=RSS_HEADERS)
         with urllib.request.urlopen(req, timeout=15) as resp:
             xml_data = resp.read()
     except Exception as e:
@@ -222,6 +229,10 @@ def fetch_tpj():
     return fetch_rss_multi(TPJ_URLS, 'tpj', include_content=True, fetch_page_fallback=False)
 
 
+def fetch_swan():
+    return fetch_rss(SWAN_URL, 'swan')
+
+
 def load_previous_items(filename):
     try:
         with open(os.path.join(DIR, filename)) as f:
@@ -287,6 +298,10 @@ def update_booooooom_articles(items):
     return update_article_cache('booooooom_articles.json', items, scrape_booooooom_article)
 
 
+def update_swan_articles(items):
+    return update_article_cache('swan_articles.json', items, scrape_swan_article)
+
+
 def main():
     ts = date.today().isoformat()
     print(f'[{ts}] Generando datos estáticos...')
@@ -313,17 +328,34 @@ def main():
         tpj = load_previous_items('tpj.json')
     print(f'     {len(tpj)} artículos')
 
-    print('  5. Lomography articles (cache GitHub Pages)...')
+    print('  5. Swann Galleries...')
+    swan = fetch_swan()
+    if not swan:
+        swan = load_previous_items('swan.json')
+    print(f'     {len(swan)} artículos')
+
+    print('  6. Lomography articles (cache GitHub Pages)...')
     purge_bad_articles('lomography_articles.json')
     new_articles = update_lomography_articles(lomo)
     print(f'     {new_articles} nuevos | {len(load_article_cache("lomography_articles.json"))} en cache')
 
-    print('  6. Booooooom articles (cache GitHub Pages)...')
+    print('  7. Booooooom articles (cache GitHub Pages)...')
     purge_bad_articles('booooooom_articles.json')
     new_boom_articles = update_booooooom_articles(boom)
     print(f'     {new_boom_articles} nuevos | {len(load_article_cache("booooooom_articles.json"))} en cache')
 
-    all_entries = sorted(colossal + lomo + boom + tpj,
+    print('  8. Swann articles (cache GitHub Pages)...')
+    purge_bad_articles('swan_articles.json')
+    new_swan_articles = update_swan_articles(swan)
+    swan_cache = load_article_cache('swan_articles.json')
+    print(f'     {new_swan_articles} nuevos | {len(swan_cache)} en cache')
+
+    for item in swan:
+        data = swan_cache.get(item.get('link'))
+        if isinstance(data, dict) and data.get('thumbnail'):
+            item['thumbnail'] = data['thumbnail']
+
+    all_entries = sorted(colossal + lomo + boom + tpj + swan,
                          key=lambda x: x.get('_parsedDate') or x.get('date') or '',
                          reverse=True)
 
@@ -336,16 +368,19 @@ def main():
     with open(os.path.join(DIR, 'tpj.json'), 'w') as f:
         json.dump({'items': tpj, 'count': len(tpj), 'updated': ts}, f)
 
+    with open(os.path.join(DIR, 'swan.json'), 'w') as f:
+        json.dump({'items': swan, 'count': len(swan), 'updated': ts}, f)
+
     with open(os.path.join(DIR, 'feeds.json'), 'w') as f:
         json.dump({'items': all_entries, 'count': len(all_entries), 'updated': ts}, f)
 
-    print(f'  Guardado: lomography.json, booooooom.json, tpj.json, feeds.json ({len(all_entries)} total)')
+    print(f'  Guardado: lomography.json, booooooom.json, tpj.json, swan.json, feeds.json ({len(all_entries)} total)')
 
-    print('  7. Subiendo a GitHub...')
+    print('  9. Subiendo a GitHub...')
     try:
         result = subprocess.run(
-            ['git', 'add', 'lomography.json', 'booooooom.json', 'tpj.json', 'feeds.json',
-             'lomography_articles.json', 'booooooom_articles.json'],
+            ['git', 'add', 'lomography.json', 'booooooom.json', 'tpj.json', 'swan.json', 'feeds.json',
+             'lomography_articles.json', 'booooooom_articles.json', 'swan_articles.json'],
             capture_output=True, text=True, cwd=DIR
         )
         result = subprocess.run(

@@ -6,6 +6,7 @@ import re
 import subprocess
 import time
 import urllib.parse
+import urllib.request
 
 PORT = 8080
 DIR = os.path.dirname(os.path.abspath(__file__))
@@ -318,6 +319,72 @@ def scrape_lomography_article(url, resolve_profiles=True):
     return data
 
 
+SWAN_ARTICLE_CACHE = {}
+SWAN_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+}
+
+
+def swan_og_image(url):
+    try:
+        req = urllib.request.Request(url, headers=SWAN_HEADERS)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            html_page = resp.read().decode('utf-8', errors='ignore')
+        m = re.search(r'property="og:image" content="([^"]+)"', html_page)
+        return m.group(1) if m else ''
+    except Exception:
+        return ''
+
+
+def scrape_swan_article(url):
+    now = time.time()
+    if url in SWAN_ARTICLE_CACHE and now - SWAN_ARTICLE_CACHE[url]['time'] < 300:
+        return SWAN_ARTICLE_CACHE[url]['data']
+    md = firecrawl_scrape(url, timeout=60)
+    if not md:
+        return None
+
+    m = re.search(r'^#{1,6}\s+', md, re.MULTILINE)
+    content_md = md[m.start():] if m else md
+    content_md = re.sub(r'^#{1,6}[^\n]*\n?', '', content_md, count=1)
+    content_md = re.sub(r'^BY\s+\[[^\]]*\]\([^)]*\)\n?', '', content_md, flags=re.MULTILINE)
+
+    cut = len(content_md)
+    for pat in (
+        r'^Subscribe to our',
+        r'^Sign [Uu]p',
+        r'^Join our',
+        r'^Get our',
+        r'^Never miss',
+        r'^Bid Online',
+        r'^Contact Us',
+        r'^About Swann',
+        r'^View Lots',
+        r'^\*\*\*\s*$',
+    ):
+        mm = re.search(pat, content_md, re.MULTILINE)
+        if mm and mm.start() < cut:
+            cut = mm.start()
+    content_md = content_md[:cut].strip()
+    content_md = re.sub(r'!\[[^\]]*\]\(<[^>]*>\)', '', content_md)
+    content_md = re.sub(r'(?<!!)\[\]\([^)]*\)', '', content_md)
+
+    images = []
+    seen_urls = set()
+    for im in re.finditer(r'!\[([^\]]*)\]\(([^)]+)\)', content_md):
+        img_url = im.group(2).strip()
+        if img_url.startswith('<') or img_url in seen_urls:
+            continue
+        seen_urls.add(img_url)
+        images.append({'url': img_url, 'alt': im.group(1)})
+
+    data = {'status': 'ok', 'content': md_to_html(content_md), 'images': images,
+            'credits': [], 'thumbnail': swan_og_image(url)}
+    SWAN_ARTICLE_CACHE[url] = {'data': data, 'time': now}
+    return data
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -358,6 +425,33 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 data = json.dumps({'status': 'error', 'message': str(e)})
             self.wfile.write(data.encode())
+        elif parsed.path == '/api/swan':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            try:
+                with open(os.path.join(DIR, 'swan.json')) as f:
+                    items = json.load(f).get('items', [])
+                data = json.dumps({'status': 'ok', 'items': items, 'count': len(items)})
+            except Exception as e:
+                data = json.dumps({'status': 'error', 'message': str(e)})
+            self.wfile.write(data.encode())
+        elif parsed.path == '/api/swan/article':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            qs = urllib.parse.parse_qs(parsed.query)
+            url = qs.get('url', [None])[0]
+            if not url:
+                self.wfile.write(json.dumps({'status': 'error', 'message': 'missing url'}).encode())
+                return
+            data = scrape_swan_article(url)
+            if data is None:
+                self.wfile.write(json.dumps({'status': 'error', 'message': 'error scraping article'}).encode())
+            else:
+                self.wfile.write(json.dumps(data).encode())
         elif parsed.path == '/api/booooooom/article':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')

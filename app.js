@@ -7,13 +7,14 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('count-lomography').addEventListener('click', () => setFilter('lomography'));
   document.getElementById('count-booooooom').addEventListener('click', () => setFilter('booooooom'));
   document.getElementById('count-tpj').addEventListener('click', () => setFilter('tpj'));
+  document.getElementById('count-swan').addEventListener('click', () => setFilter('swan'));
 });
 
 let __activeFilter = null;
 
 async function loadFeeds() {
-  const [colossal, lomo, boom, tpj] = await Promise.all([fetchColossal(), fetchLomography(), fetchBooooooom(), fetchTpj()]);
-  window.__allEntries = [...colossal, ...lomo, ...boom, ...tpj].sort((a, b) => (b._parsedDate || 0) - (a._parsedDate || 0));
+  const [colossal, lomo, boom, tpj, swan] = await Promise.all([fetchColossal(), fetchLomography(), fetchBooooooom(), fetchTpj(), fetchSwan()]);
+  window.__allEntries = [...colossal, ...lomo, ...boom, ...tpj, ...swan].sort((a, b) => (b._parsedDate || 0) - (a._parsedDate || 0));
   if (!window.__allEntries.length) { showEmpty(); return; }
   applyFilter();
 }
@@ -123,6 +124,34 @@ function normalizeTpj(items) {
   }));
 }
 
+async function fetchSwan() {
+  // Try live API first (VPS mode)
+  try {
+    const resp = await fetch('/api/swan');
+    const data = await resp.json();
+    if (data && data.status === 'ok' && data.items.length) return normalizeSwan(data.items);
+  } catch {}
+  // Fallback: static JSON (GitHub Pages)
+  try {
+    const resp = await fetch('swan.json');
+    const data = await resp.json();
+    if (data && data.items) return normalizeSwan(data.items);
+  } catch {}
+  return [];
+}
+
+function normalizeSwan(items) {
+  return items.map(i => ({
+    _source: 'swan',
+    _id: i.link || i._id,
+    _parsedDate: (i.date || i._parsedDate) ? new Date(i.date || i._parsedDate) : null,
+    link: i.link,
+    title: i.title,
+    content: i.content || i.excerpt,
+    thumbnail: i.thumbnail
+  }));
+}
+
 function extractImg(post) {
   if (post.thumbnail) return post.thumbnail;
   const m = (post.content || '').match(/<img[^>]+src=["']([^"']+)["']/);
@@ -136,6 +165,7 @@ function applyFilter() {
   document.getElementById('count-lomography').classList.toggle('active', __activeFilter === 'lomography');
   document.getElementById('count-booooooom').classList.toggle('active', __activeFilter === 'booooooom');
   document.getElementById('count-tpj').classList.toggle('active', __activeFilter === 'tpj');
+  document.getElementById('count-swan').classList.toggle('active', __activeFilter === 'swan');
 }
 
 function setFilter(source) {
@@ -154,7 +184,7 @@ function render(entries) {
         <div class="card-overlay"></div>
       </div>
       <div class="card-info">
-        <div class="card-source">${e._source === 'lomography' ? 'Lomography Magazine' : e._source === 'booooooom' ? 'Booooooom' : e._source === 'tpj' ? 'The Photographic Journal' : 'Colossal · Fotografía'}</div>
+        <div class="card-source">${e._source === 'lomography' ? 'Lomography Magazine' : e._source === 'booooooom' ? 'Booooooom' : e._source === 'tpj' ? 'The Photographic Journal' : e._source === 'swan' ? 'Swann Galleries' : 'Colossal · Fotografía'}</div>
         <div class="card-title"><a href="${e.link}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${e.title}</a></div>
         <div class="card-meta">
           <span class="card-date">${e._parsedDate ? fmtDate(e._parsedDate) : ''}</span>
@@ -167,11 +197,13 @@ function render(entries) {
   const colossal = entries.slice(0, 100).filter(e => e._source === 'colossal').length;
   const lomo = entries.slice(0, 100).filter(e => e._source === 'lomography').length;
   const boom = entries.slice(0, 100).filter(e => e._source === 'booooooom').length;
-  const tpj = total - colossal - lomo - boom;
+  const tpj = entries.slice(0, 100).filter(e => e._source === 'tpj').length;
+  const swan = total - colossal - lomo - boom - tpj;
   document.getElementById('count-colossal').textContent = `Colossal ${colossal}`;
   document.getElementById('count-lomography').textContent = `Lomography ${lomo}`;
   document.getElementById('count-booooooom').textContent = `Booooooom ${boom}`;
   document.getElementById('count-tpj').textContent = `Photographic Journal ${tpj}`;
+  document.getElementById('count-swan').textContent = `Swann ${swan}`;
   document.getElementById('footer-info').textContent = total + ' fotografías';
 }
 
@@ -418,6 +450,34 @@ function renderTpjArticle(body, entry) {
   body.dataset.lomoImages = JSON.stringify(images.map(i => ({ url: i.url, caption: i.caption || '' })));
 }
 
+function renderSwanArticle(body, entry, data) {
+  const images = data.images || [];
+  const thumb = data.thumbnail || entry.thumbnail;
+  const thumbHTML = (!images.length && thumb) ? `<div class="modal-article" style="padding-bottom:0"><img src="${thumb}" alt="" class="modal-swan-thumb" loading="lazy"></div>` : '';
+  body.innerHTML = `
+    <div class="modal-tools">
+      ${images.length ? `<button class="modal-tool-btn" onclick="openGallery()">Galería (${images.length})</button>` : ''}
+      <button class="modal-tool-btn" onclick="toggleFullscreen()">Pantalla completa</button>
+      <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>
+    </div>
+    ${thumbHTML}
+    <div class="modal-title-group">
+      <h2 class="modal-title">${entry.title}</h2>
+      <div class="modal-meta">
+        <span class="modal-source">Swann Galleries</span>
+        ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
+      </div>
+    </div>
+    <div class="modal-article">
+      <div class="modal-article-content">${data.content}</div>
+      <div class="modal-footer" style="padding-top:2rem">
+        <a href="${entry.link}" target="_blank" rel="noopener" class="modal-link-tag">Ver original →</a>
+      </div>
+    </div>
+  `;
+  body.dataset.lomoImages = JSON.stringify(images.map(i => ({ url: i.url, caption: i.alt || '' })));
+}
+
 async function openModal(card) {
   const id = card.dataset.id;
   const source = card.dataset.source;
@@ -513,6 +573,48 @@ async function openModal(card) {
     const entry = window.__allEntries?.find(e => e._id === id);
     if (!entry) { body.innerHTML = '<p class="modal-error">error</p>'; return; }
     renderTpjArticle(body, entry);
+    return;
+  }
+
+  if (source === 'swan') {
+    const entry = window.__allEntries?.find(e => e._id === id);
+    if (!entry) { body.innerHTML = '<p class="modal-error">error</p>'; return; }
+    let data = null;
+    try {
+      const resp = await fetch(`/api/swan/article?url=${encodeURIComponent(entry.link)}`);
+      const d = await resp.json();
+      if (d.status === 'ok') data = d;
+    } catch {}
+    if (!data) {
+      try {
+        const resp = await fetch('swan_articles.json');
+        const cache = await resp.json();
+        const cached = (cache.articles || cache)[entry.link];
+        if (cached && cached.status === 'ok') data = cached;
+      } catch {}
+    }
+    if (data) {
+      renderSwanArticle(body, entry, data);
+    } else {
+      body.innerHTML = `
+        <div class="modal-tools">
+          <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>
+        </div>
+        <div class="modal-title-group">
+          <h2 class="modal-title">${entry.title}</h2>
+          <div class="modal-meta">
+            <span class="modal-source">Swann Galleries</span>
+            ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
+          </div>
+        </div>
+        <div class="modal-article">
+          <p class="modal-error">no se pudo cargar el contenido desde este servidor</p>
+          <div class="modal-footer" style="padding-top:2rem">
+            <a href="${entry.link}" target="_blank" rel="noopener" class="modal-link-tag">Ver original →</a>
+          </div>
+        </div>
+      `;
+    }
     return;
   }
 
