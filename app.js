@@ -323,7 +323,24 @@ async function openModal(card) {
       `;
       body.dataset.lomoImages = JSON.stringify(images.map(i => ({ url: i.url, caption: i.alt || '' })));
     } catch (e) {
-      body.innerHTML = `<p class="modal-error">error al cargar el artículo</p>`;
+      body.innerHTML = `
+        <div class="modal-tools">
+          <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>
+        </div>
+        <div class="modal-title-group">
+          <h2 class="modal-title">${entry.title}</h2>
+          <div class="modal-meta">
+            <span class="modal-source">Lomography Magazine</span>
+            ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
+          </div>
+        </div>
+        <div class="modal-article">
+          <p class="modal-error">no se pudo cargar el contenido desde este servidor</p>
+          <div class="modal-footer" style="padding-top:2rem">
+            <a href="${entry.link}" target="_blank" rel="noopener" class="modal-link-tag">Ver original →</a>
+          </div>
+        </div>
+      `;
     }
     return;
   }
@@ -363,7 +380,24 @@ async function openModal(card) {
       `;
       body.dataset.lomoImages = JSON.stringify(images.map(i => ({ url: i.url, caption: i.alt || '' })));
     } catch (e) {
-      body.innerHTML = `<p class="modal-error">error al cargar el artículo</p>`;
+      body.innerHTML = `
+        <div class="modal-tools">
+          <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>
+        </div>
+        <div class="modal-title-group">
+          <h2 class="modal-title">${entry.title}</h2>
+          <div class="modal-meta">
+            <span class="modal-source">Booooooom</span>
+            ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
+          </div>
+        </div>
+        <div class="modal-article">
+          <p class="modal-error">no se pudo cargar el contenido desde este servidor</p>
+          <div class="modal-footer" style="padding-top:2rem">
+            <a href="${entry.link}" target="_blank" rel="noopener" class="modal-link-tag">Ver original →</a>
+          </div>
+        </div>
+      `;
     }
     return;
   }
