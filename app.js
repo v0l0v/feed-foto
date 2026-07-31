@@ -328,6 +328,46 @@ async function openModal(card) {
     return;
   }
 
+  if (source === 'booooooom') {
+    const entry = window.__allEntries?.find(e => e._id === id);
+    if (!entry) { body.innerHTML = '<p class="modal-error">error</p>'; return; }
+    try {
+      const resp = await fetch(`/api/booooooom/article?url=${encodeURIComponent(entry.link)}`);
+      const data = await resp.json();
+      if (data.status !== 'ok') throw new Error(data.message);
+      const images = data.images || [];
+      const creditsHTML = (data.credits && data.credits.length) ? '<div class="modal-photographers"><span class="photographer-label">Fotógrafos</span>' + data.credits.map(c => '<a href="' + c.url + '" target="_blank" rel="noopener" class="photographer-link">' + c.name + '</a>').join(', ') + '</div>' : '';
+      const boomLinks = data.content ? extractSocialLinks(data.content) : [];
+      const linksHTML = boomLinks.length ? '<div class="modal-links">' + boomLinks.map(l => '<a href="' + l.url + '" target="_blank" rel="noopener" class="modal-link-tag link-' + l.platform + '">' + l.text + '</a>').join('') + '</div>' : '';
+      body.innerHTML = `
+        <div class="modal-tools">
+          ${images.length ? `<button class="modal-tool-btn" onclick="openGallery()">Galería (${images.length})</button>` : ''}
+          <button class="modal-tool-btn" onclick="toggleFullscreen()">Pantalla completa</button>
+          <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>
+        </div>
+        ${linksHTML}
+        <div class="modal-title-group">
+          <h2 class="modal-title">${entry.title}</h2>
+          <div class="modal-meta">
+            <span class="modal-source">Booooooom</span>
+            ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
+          </div>
+        </div>
+        <div class="modal-article">
+          <div class="modal-article-content">${data.content}</div>
+          ${creditsHTML}
+          <div class="modal-footer" style="padding-top:2rem">
+            <a href="${entry.link}" target="_blank" rel="noopener" class="modal-link-tag">Ver original →</a>
+          </div>
+        </div>
+      `;
+      body.dataset.lomoImages = JSON.stringify(images.map(i => ({ url: i.url, caption: i.alt || '' })));
+    } catch (e) {
+      body.innerHTML = `<p class="modal-error">error al cargar el artículo</p>`;
+    }
+    return;
+  }
+
   let post;
   try {
     post = await (await fetch(`${POST_API}/${id}`)).json();

@@ -157,6 +157,47 @@ def resolve_lomo_profile(url):
     return None
 
 ARTICLE_CACHE = {}
+BOOM_ARTICLE_CACHE = {}
+
+def scrape_booooooom_article(url):
+    now = time.time()
+    if url in BOOM_ARTICLE_CACHE and now - BOOM_ARTICLE_CACHE[url]['time'] < 300:
+        return BOOM_ARTICLE_CACHE[url]['data']
+    try:
+        result = subprocess.run(
+            ['firecrawl', 'scrape', url, '--only-main-content'],
+            capture_output=True, text=True, timeout=60, cwd=DIR
+        )
+        md = result.stdout or result.stderr
+    except subprocess.TimeoutExpired:
+        return None
+    except Exception:
+        return None
+    if not md:
+        return None
+
+    promo = re.search(r'\[!\[[^\]]*\]\([^)]*\)\]\(https://(?:www\.)?booooooom\.com/', md)
+    if promo:
+        md = md[:promo.start()]
+    md = re.sub(r'^\[Submit\][^\n]*\n?', '', md)
+
+    images = [{'url': m.group(2), 'alt': m.group(1)} for m in re.finditer(r'!\[([^\]]*)\]\(([^)]+)\)', md)]
+
+    credits = []
+    seen = set()
+    for cm in re.finditer(r'_\[([^\]]+)\]\((https?://[^)]+)\)_', md):
+        name = cm.group(1).strip()
+        url = cm.group(2).strip()
+        clean_name = re.sub(r"[’']s (?:Website|Portfolio|Site|Blog)$", '', name, flags=re.I)
+        clean_name = re.sub(r'\s+on\s+(?:Instagram|Twitter|Facebook|Flickr|Vimeo|YouTube|Bluesky|TikTok)$', '', clean_name, flags=re.I).strip()
+        if not clean_name or url in seen:
+            continue
+        seen.add(url)
+        credits.append({'name': clean_name, 'url': url})
+
+    data = {'status': 'ok', 'content': md_to_html(md), 'images': images, 'credits': credits}
+    BOOM_ARTICLE_CACHE[url] = {'data': data, 'time': now}
+    return data
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -174,6 +215,33 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 data = json.dumps({'status': 'error', 'message': str(e)})
             self.wfile.write(data.encode())
+        elif parsed.path == '/api/booooooom':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            try:
+                with open(os.path.join(DIR, 'booooooom.json')) as f:
+                    items = json.load(f).get('items', [])
+                data = json.dumps({'status': 'ok', 'items': items, 'count': len(items)})
+            except Exception as e:
+                data = json.dumps({'status': 'error', 'message': str(e)})
+            self.wfile.write(data.encode())
+        elif parsed.path == '/api/booooooom/article':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            qs = urllib.parse.parse_qs(parsed.query)
+            url = qs.get('url', [None])[0]
+            if not url:
+                self.wfile.write(json.dumps({'status': 'error', 'message': 'missing url'}).encode())
+                return
+            data = scrape_booooooom_article(url)
+            if data is None:
+                self.wfile.write(json.dumps({'status': 'error', 'message': 'error scraping article'}).encode())
+            else:
+                self.wfile.write(json.dumps(data).encode())
         elif parsed.path == '/api/lomography/article':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')

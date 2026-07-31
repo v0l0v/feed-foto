@@ -179,7 +179,7 @@ def fetch_booooooom():
             excerpt = unescape(re.sub(r'\s+', ' ', excerpt).strip())
 
             articles.append({
-                '_source': 'boooobooum',
+                '_source': 'booooooom',
                 'title': title,
                 'link': link,
                 'date': pub_date,
@@ -192,6 +192,17 @@ def fetch_booooooom():
     return articles
 
 
+def load_previous_items(filename):
+    try:
+        with open(os.path.join(DIR, filename)) as f:
+            old = json.load(f).get('items', [])
+        if old:
+            print(f'     scrape vacío → conservando {len(old)} previos de {filename}')
+        return old
+    except Exception:
+        return []
+
+
 def main():
     ts = date.today().isoformat()
     print(f'[{ts}] Generando datos estáticos...')
@@ -202,14 +213,18 @@ def main():
 
     print('  2. Lomography...')
     lomo = fetch_lomography()
+    if not lomo:
+        lomo = load_previous_items('lomography.json')
     print(f'     {len(lomo)} artículos')
 
     print('  3. Booooooom...')
     boom = fetch_booooooom()
+    if not boom:
+        boom = load_previous_items('booooooom.json')
     print(f'     {len(boom)} artículos')
 
     all_entries = sorted(colossal + lomo + boom,
-                         key=lambda x: x.get('_parsedDate') or '',
+                         key=lambda x: x.get('_parsedDate') or x.get('date') or '',
                          reverse=True)
 
     with open(os.path.join(DIR, 'lomography.json'), 'w') as f:
