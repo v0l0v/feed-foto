@@ -222,6 +222,21 @@ function extractColossalPhotographers(html) {
   return list;
 }
 
+function isShareLink(url) {
+  return /facebook\.com\/(?:sharer|sharing|dialog\/share|plugins|login|share)/.test(url.toLowerCase());
+}
+
+function isOwnDomain(href) {
+  try {
+    const h = new URL(href).hostname.toLowerCase();
+    return h.endsWith('thisiscolossal.com') || h.endsWith('lomography.com') || h.endsWith('booooooom.com');
+  } catch {
+    return false;
+  }
+}
+
+const WEBSITE_TEXT_RE = /\b(?:web[\s-]*site|web[\s-]*shop|portfolio)\b|\bweb\b|\bsite\b/i;
+
 function extractSocialLinks(html) {
   const doc = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
   const links = [];
@@ -266,19 +281,80 @@ function extractSocialLinks(html) {
     } else if (h.includes('tiktok.com')) {
       if (!seen.has(url)) { seen.add(url); links.push({ platform: 'tiktok', text: 'TikTok', url }); }
     } else if (h.includes('facebook.com')) {
+      if (isShareLink(url)) return;
       if (!seen.has(url)) { seen.add(url); links.push({ platform: 'facebook', text: text, url }); }
     } else if (h.includes('bsky.app')) {
       if (!seen.has(url)) { seen.add(url); links.push({ platform: 'bluesky', text: text, url }); }
     } else if (h.includes('threads.net')) {
       if (!seen.has(url)) { seen.add(url); links.push({ platform: 'threads', text: text, url }); }
-    } else if (text.toLowerCase() === 'website') {
-      try { url = new URL(href).origin + '/'; } catch {}
+    } else if (WEBSITE_TEXT_RE.test(text) && /^https?:\/\//i.test(href) && !isOwnDomain(href)) {
+      try { url = new URL(href).origin + '/'; } catch { return; }
       if (!seen.has(url)) { seen.add(url); links.push({ platform: 'web', text: 'Web', url }); }
     }
   });
   const order = ['instagram', 'youtube', 'x', 'vimeo', 'flickr', 'tiktok', 'facebook', 'bluesky', 'threads', 'web'];
   links.sort((a, b) => order.indexOf(a.platform) - order.indexOf(b.platform));
   return links;
+}
+
+function renderLomoArticle(body, entry, data) {
+  const images = data.images || [];
+  const creditsHTML = (data.credits && data.credits.length) ? '<div class="modal-photographers"><span class="photographer-label">Fotógrafos</span>' + data.credits.map(c => '<a href="' + c.url + '" target="_blank" rel="noopener" class="photographer-link">' + c.name + '</a>').join(', ') + '</div>' : '';
+  const lomoLinks = data.content ? extractSocialLinks(data.content) : [];
+  const linksHTML = lomoLinks.length ? '<div class="modal-links">' + lomoLinks.map(l => '<a href="' + l.url + '" target="_blank" rel="noopener" class="modal-link-tag link-' + l.platform + '">' + l.text + '</a>').join('') + '</div>' : '';
+  body.innerHTML = `
+    <div class="modal-tools">
+      ${images.length ? `<button class="modal-tool-btn" onclick="openGallery()">Galería (${images.length})</button>` : ''}
+      <button class="modal-tool-btn" onclick="toggleFullscreen()">Pantalla completa</button>
+      <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>
+    </div>
+    ${linksHTML}
+    <div class="modal-title-group">
+      <h2 class="modal-title">${entry.title}</h2>
+      <div class="modal-meta">
+        <span class="modal-source">Lomography Magazine</span>
+        ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
+      </div>
+    </div>
+    <div class="modal-article">
+      <div class="modal-article-content">${data.content}</div>
+      ${creditsHTML}
+      <div class="modal-footer" style="padding-top:2rem">
+        <a href="${entry.link}" target="_blank" rel="noopener" class="modal-link-tag">Ver original →</a>
+      </div>
+    </div>
+  `;
+  body.dataset.lomoImages = JSON.stringify(images.map(i => ({ url: i.url, caption: i.alt || '' })));
+}
+
+function renderBoomArticle(body, entry, data) {
+  const images = data.images || [];
+  const creditLinks = (data.credits || []).filter(c => !isShareLink(c.url)).map(c => ({ platform: c.platform || 'web', text: c.name, url: c.url }));
+  const socialLinks = data.content ? extractSocialLinks(data.content) : [];
+  const boomLinks = [...creditLinks, ...socialLinks];
+  const linksHTML = boomLinks.length ? '<div class="modal-links">' + boomLinks.map(l => '<a href="' + l.url + '" target="_blank" rel="noopener" class="modal-link-tag link-' + l.platform + '">' + l.text + '</a>').join('') + '</div>' : '';
+  body.innerHTML = `
+    <div class="modal-tools">
+      ${images.length ? `<button class="modal-tool-btn" onclick="openGallery()">Galería (${images.length})</button>` : ''}
+      <button class="modal-tool-btn" onclick="toggleFullscreen()">Pantalla completa</button>
+      <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>
+    </div>
+    ${linksHTML}
+    <div class="modal-title-group">
+      <h2 class="modal-title">${entry.title}</h2>
+      <div class="modal-meta">
+        <span class="modal-source">Booooooom</span>
+        ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
+      </div>
+    </div>
+    <div class="modal-article">
+      <div class="modal-article-content">${data.content}</div>
+      <div class="modal-footer" style="padding-top:2rem">
+        <a href="${entry.link}" target="_blank" rel="noopener" class="modal-link-tag">Ver original →</a>
+      </div>
+    </div>
+  `;
+  body.dataset.lomoImages = JSON.stringify(images.map(i => ({ url: i.url, caption: i.alt || '' })));
 }
 
 async function openModal(card) {
@@ -291,38 +367,23 @@ async function openModal(card) {
   if (source === 'lomography') {
     const entry = window.__allEntries?.find(e => e._id === id);
     if (!entry) { body.innerHTML = '<p class="modal-error">error</p>'; return; }
+    let data = null;
     try {
       const resp = await fetch(`/api/lomography/article?url=${encodeURIComponent(entry.link)}`);
-      const data = await resp.json();
-      if (data.status !== 'ok') throw new Error(data.message);
-      const images = data.images || [];
-      const creditsHTML = (data.credits && data.credits.length) ? '<div class="modal-photographers"><span class="photographer-label">Fotógrafos</span>' + data.credits.map(c => '<a href="' + c.url + '" target="_blank" rel="noopener" class="photographer-link">' + c.name + '</a>').join(', ') + '</div>' : '';
-      const lomoLinks = data.content ? extractSocialLinks(data.content) : [];
-      const linksHTML = lomoLinks.length ? '<div class="modal-links">' + lomoLinks.map(l => '<a href="' + l.url + '" target="_blank" rel="noopener" class="modal-link-tag link-' + l.platform + '">' + l.text + '</a>').join('') + '</div>' : '';
-      body.innerHTML = `
-        <div class="modal-tools">
-          ${images.length ? `<button class="modal-tool-btn" onclick="openGallery()">Galería (${images.length})</button>` : ''}
-          <button class="modal-tool-btn" onclick="toggleFullscreen()">Pantalla completa</button>
-          <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>
-        </div>
-        ${linksHTML}
-        <div class="modal-title-group">
-          <h2 class="modal-title">${entry.title}</h2>
-          <div class="modal-meta">
-            <span class="modal-source">Lomography Magazine</span>
-            ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
-          </div>
-        </div>
-        <div class="modal-article">
-          <div class="modal-article-content">${data.content}</div>
-          ${creditsHTML}
-          <div class="modal-footer" style="padding-top:2rem">
-            <a href="${entry.link}" target="_blank" rel="noopener" class="modal-link-tag">Ver original →</a>
-          </div>
-        </div>
-      `;
-      body.dataset.lomoImages = JSON.stringify(images.map(i => ({ url: i.url, caption: i.alt || '' })));
-    } catch (e) {
+      const d = await resp.json();
+      if (d.status === 'ok') data = d;
+    } catch {}
+    if (!data) {
+      try {
+        const resp = await fetch('lomography_articles.json');
+        const cache = await resp.json();
+        const cached = (cache.articles || cache)[entry.link];
+        if (cached && cached.status === 'ok') data = cached;
+      } catch {}
+    }
+    if (data) {
+      renderLomoArticle(body, entry, data);
+    } else {
       body.innerHTML = `
         <div class="modal-tools">
           <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>
@@ -348,38 +409,23 @@ async function openModal(card) {
   if (source === 'booooooom') {
     const entry = window.__allEntries?.find(e => e._id === id);
     if (!entry) { body.innerHTML = '<p class="modal-error">error</p>'; return; }
+    let data = null;
     try {
       const resp = await fetch(`/api/booooooom/article?url=${encodeURIComponent(entry.link)}`);
-      const data = await resp.json();
-      if (data.status !== 'ok') throw new Error(data.message);
-      const images = data.images || [];
-      const creditsHTML = (data.credits && data.credits.length) ? '<div class="modal-photographers"><span class="photographer-label">Fotógrafos</span>' + data.credits.map(c => '<a href="' + c.url + '" target="_blank" rel="noopener" class="photographer-link">' + c.name + '</a>').join(', ') + '</div>' : '';
-      const boomLinks = data.content ? extractSocialLinks(data.content) : [];
-      const linksHTML = boomLinks.length ? '<div class="modal-links">' + boomLinks.map(l => '<a href="' + l.url + '" target="_blank" rel="noopener" class="modal-link-tag link-' + l.platform + '">' + l.text + '</a>').join('') + '</div>' : '';
-      body.innerHTML = `
-        <div class="modal-tools">
-          ${images.length ? `<button class="modal-tool-btn" onclick="openGallery()">Galería (${images.length})</button>` : ''}
-          <button class="modal-tool-btn" onclick="toggleFullscreen()">Pantalla completa</button>
-          <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>
-        </div>
-        ${linksHTML}
-        <div class="modal-title-group">
-          <h2 class="modal-title">${entry.title}</h2>
-          <div class="modal-meta">
-            <span class="modal-source">Booooooom</span>
-            ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
-          </div>
-        </div>
-        <div class="modal-article">
-          <div class="modal-article-content">${data.content}</div>
-          ${creditsHTML}
-          <div class="modal-footer" style="padding-top:2rem">
-            <a href="${entry.link}" target="_blank" rel="noopener" class="modal-link-tag">Ver original →</a>
-          </div>
-        </div>
-      `;
-      body.dataset.lomoImages = JSON.stringify(images.map(i => ({ url: i.url, caption: i.alt || '' })));
-    } catch (e) {
+      const d = await resp.json();
+      if (d.status === 'ok') data = d;
+    } catch {}
+    if (!data) {
+      try {
+        const resp = await fetch('booooooom_articles.json');
+        const cache = await resp.json();
+        const cached = (cache.articles || cache)[entry.link];
+        if (cached && cached.status === 'ok') data = cached;
+      } catch {}
+    }
+    if (data) {
+      renderBoomArticle(body, entry, data);
+    } else {
       body.innerHTML = `
         <div class="modal-tools">
           <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>

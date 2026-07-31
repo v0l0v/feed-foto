@@ -75,9 +75,23 @@ def scrape_lomography():
     return articles
 
 def inline_to_html(text):
+    urls = []
+
+    def _save_url(m):
+        urls.append(m.group(0))
+        return f'\x00{len(urls) - 1}\x00'
+
+    def _restore(i):
+        return urls[int(i)]
+
+    text = re.sub(r'https?://[^)\s]+', _save_url, text)
     text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+    text = re.sub(r'_\*([^*]+)\*_', r'<em>\1</em>', text)
     text = re.sub(r'\*(.+?)\*', r'<em>\1</em>', text)
-    text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2" target="_blank" rel="noopener">\1</a>', text)
+    text = re.sub(r'_(.+?)_', r'<em>\1</em>', text)
+    text = re.sub(r'\[([^\]]+)\]\(\x00(\d+)\x00\)',
+                  lambda m: f'<a href="{_restore(m.group(2))}" target="_blank" rel="noopener">{m.group(1)}</a>', text)
+    text = re.sub(r'\x00(\d+)\x00', lambda m: _restore(m.group(1)), text)
     return text
 
 def md_to_html(md):
@@ -159,6 +173,23 @@ def resolve_lomo_profile(url):
 ARTICLE_CACHE = {}
 BOOM_ARTICLE_CACHE = {}
 
+def boom_credit_platform(raw_name, url):
+    h = url.lower()
+    platforms = {
+        'instagram.com': 'instagram', 'twitter.com': 'x', 'x.com': 'x',
+        'facebook.com': 'facebook', 'flickr.com': 'flickr', 'vimeo.com': 'vimeo',
+        'youtube.com': 'youtube', 'youtu.be': 'youtube', 'bsky.app': 'bluesky',
+        'tiktok.com': 'tiktok', 'threads.net': 'threads',
+    }
+    for frag, name in platforms.items():
+        if frag in h:
+            return name
+    m = re.search(r' on (\w+)$', raw_name, re.I)
+    if m:
+        return {'instagram': 'instagram', 'twitter': 'x', 'x': 'x'}.get(m.group(1).lower(), m.group(1).lower())
+    return 'web'
+
+
 def scrape_booooooom_article(url):
     now = time.time()
     if url in BOOM_ARTICLE_CACHE and now - BOOM_ARTICLE_CACHE[url]['time'] < 300:
@@ -176,28 +207,93 @@ def scrape_booooooom_article(url):
     if not md:
         return None
 
-    promo = re.search(r'\[!\[[^\]]*\]\([^)]*\)\]\(https://(?:www\.)?booooooom\.com/', md)
-    if promo:
-        md = md[:promo.start()]
+    md = md.replace('\u2060', '').replace('\u200b', '')
     md = re.sub(r'^\[Submit\][^\n]*\n?', '', md)
 
-    images = [{'url': m.group(2), 'alt': m.group(1)} for m in re.finditer(r'!\[([^\]]*)\]\(([^)]+)\)', md)]
+    # Recorta promos / footer / related articles en cuanto empiezan
+    cut = len(md)
+    for pat in (
+        r'\[!\[[^\]]*\]\([^)]*\)\]\(https?://(?:www\.|shop\.)?booooooom\.com/',
+        r'A Letter From the Founder',
+        r"Tomorrow['’]s Talent \d",
+        r'Join our Secret Email Club',
+        r'\*\*Related Articles\*\*',
+        r'Twitter Widget Iframe',
+        r'^#{1,6}\s+',
+    ):
+        m = re.search(pat, md, re.MULTILINE)
+        if m and m.start() < cut:
+            cut = m.start()
+    md = md[:cut].strip()
+
+    images = []
+    seen_urls = set()
+    for im in re.finditer(r'!\[([^\]]*)\]\(([^)]+)\)', md):
+        img_url = im.group(2).strip()
+        if img_url in seen_urls:
+            continue
+        seen_urls.add(img_url)
+        images.append({'url': img_url, 'alt': im.group(1)})
 
     credits = []
-    seen = set()
-    for cm in re.finditer(r'_\[([^\]]+)\]\((https?://[^)]+)\)_', md):
-        name = cm.group(1).strip()
+    seen_names = set()
+    credit_pat = re.compile(r"(?:['’]s (?:Website|Portfolio|Site|Blog))|(?: on (?:Instagram|Twitter|Facebook|Flickr|Vimeo|YouTube|Bluesky|TikTok))$", re.I)
+    for cm in re.finditer(r'^_?\[([^\]]+)\]\((https?://[^)]+)\)_?[ \t]*$', md, re.MULTILINE):
+        raw_name = cm.group(1).strip().strip('_')
         url = cm.group(2).strip()
-        clean_name = re.sub(r"[’']s (?:Website|Portfolio|Site|Blog)$", '', name, flags=re.I)
-        clean_name = re.sub(r'\s+on\s+(?:Instagram|Twitter|Facebook|Flickr|Vimeo|YouTube|Bluesky|TikTok)$', '', clean_name, flags=re.I).strip()
-        if not clean_name or url in seen:
+        if not credit_pat.search(raw_name):
             continue
-        seen.add(url)
-        credits.append({'name': clean_name, 'url': url})
+        name = re.sub(r"[’']s (?:Website|Portfolio|Site|Blog)$", '', raw_name, flags=re.I)
+        name = re.sub(r'\s+on\s+(?:Instagram|Twitter|Facebook|Flickr|Vimeo|YouTube|Bluesky|TikTok)$', '', name, flags=re.I).strip()
+        if not name or name.lower() in seen_names:
+            continue
+        seen_names.add(name.lower())
+        credits.append({'name': name, 'url': url, 'platform': boom_credit_platform(raw_name, url)})
 
-    data = {'status': 'ok', 'content': md_to_html(md), 'images': images, 'credits': credits}
+    # Los créditos se muestran aparte en el frontend, fuera del contenido
+    content_md = re.sub(r'^_?\[[^\]]+\]\((https?://[^)]+)\)_?[ \t]*\n?', '', md, flags=re.MULTILINE)
+
+    data = {'status': 'ok', 'content': md_to_html(content_md), 'images': images, 'credits': credits}
     BOOM_ARTICLE_CACHE[url] = {'data': data, 'time': now}
     return data
+
+def scrape_lomography_article(url, resolve_profiles=True):
+    now = time.time()
+    if url in ARTICLE_CACHE and now - ARTICLE_CACHE[url]['time'] < 300:
+        return ARTICLE_CACHE[url]['data']
+    try:
+        result = subprocess.run(
+            ['firecrawl', 'scrape', url, '--only-main-content'],
+            capture_output=True, text=True, timeout=60, cwd=DIR
+        )
+        md = result.stdout or result.stderr
+    except subprocess.TimeoutExpired:
+        return None
+    except Exception:
+        return None
+    if not md:
+        return None
+    idx = re.search(r'## (?:One|\d+) Likes?|## No Comments|Please login to leave a comment|More Interesting Articles', md)
+    clean_md = md[:idx.start()] if idx else md
+    images = [{'url': m.group(2), 'alt': m.group(1)} for m in re.finditer(r'!\[([^\]]*)\]\(([^)]+)\)', clean_md)]
+    body_md = re.split(r'\nwritten by\b', clean_md, maxsplit=1)[0] if re.search(r'\nwritten by\b', clean_md) else clean_md
+    content = md_to_html(body_md)
+    credits = []
+    seen_names = set()
+    for cm in re.finditer(r'\[([^\]]+)\]\((https://www\.lomography\.com/homes/[^)]+)\)', clean_md):
+        name = cm.group(1).strip()
+        if name.lower() not in seen_names:
+            seen_names.add(name.lower())
+            if resolve_profiles:
+                social = resolve_lomo_profile(cm.group(2))
+                if social:
+                    credits.append({'name': name, 'url': social['url']})
+                    continue
+            credits.append({'name': name, 'url': cm.group(2)})
+    data = {'status': 'ok', 'content': content, 'images': images, 'credits': credits}
+    ARTICLE_CACHE[url] = {'data': data, 'time': now}
+    return data
+
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -252,39 +348,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if not url:
                 self.wfile.write(json.dumps({'status': 'error', 'message': 'missing url'}).encode())
                 return
-            now = time.time()
-            if url in ARTICLE_CACHE and now - ARTICLE_CACHE[url]['time'] < 300:
-                self.wfile.write(json.dumps(ARTICLE_CACHE[url]['data']).encode())
-                return
-            try:
-                result = subprocess.run(
-                    ['firecrawl', 'scrape', url, '--only-main-content'],
-                    capture_output=True, text=True, timeout=60, cwd=DIR
-                )
-                md = result.stdout or result.stderr
-                idx = re.search(r'## (?:One|\d+) Likes?|## No Comments|Please login to leave a comment|More Interesting Articles', md)
-                clean_md = md[:idx.start()] if idx else md
-                images = [{'url': m.group(2), 'alt': m.group(1)} for m in re.finditer(r'!\[([^\]]*)\]\(([^)]+)\)', clean_md)]
-                body_md = re.split(r'\nwritten by\b', clean_md, maxsplit=1)[0] if re.search(r'\nwritten by\b', clean_md) else clean_md
-                content = md_to_html(body_md)
-                credits = []
-                seen_names = set()
-                for cm in re.finditer(r'\[([^\]]+)\]\((https://www\.lomography\.com/homes/[^)]+)\)', clean_md):
-                    name = cm.group(1).strip()
-                    if name.lower() not in seen_names:
-                        seen_names.add(name.lower())
-                        social = resolve_lomo_profile(cm.group(2))
-                        if social:
-                            credits.append({'name': name, 'url': social['url']})
-                        else:
-                            credits.append({'name': name, 'url': cm.group(2)})
-                data = {'status': 'ok', 'content': content, 'images': images, 'credits': credits}
-                ARTICLE_CACHE[url] = {'data': data, 'time': now}
+            data = scrape_lomography_article(url)
+            if data is None:
+                self.wfile.write(json.dumps({'status': 'error', 'message': 'error scraping article'}).encode())
+            else:
                 self.wfile.write(json.dumps(data).encode())
-            except subprocess.TimeoutExpired:
-                self.wfile.write(json.dumps({'status': 'error', 'message': 'timeout scraping article'}).encode())
-            except Exception as e:
-                self.wfile.write(json.dumps({'status': 'error', 'message': str(e)}).encode())
         else:
             super().do_GET()
 

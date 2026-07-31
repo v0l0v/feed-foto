@@ -8,6 +8,8 @@ from datetime import date, datetime
 from pathlib import Path
 from html import unescape
 
+from server import scrape_lomography_article, scrape_booooooom_article
+
 DIR = os.path.dirname(os.path.abspath(__file__))
 
 WP_API = 'https://www.thisiscolossal.com/wp-json/wp/v2/posts?categories=496&per_page=20'
@@ -203,6 +205,43 @@ def load_previous_items(filename):
         return []
 
 
+def load_article_cache(filename):
+    try:
+        with open(os.path.join(DIR, filename)) as f:
+            return json.load(f).get('articles', {})
+    except Exception:
+        return {}
+
+
+def update_article_cache(filename, items, scrape_fn):
+    cache = load_article_cache(filename)
+    new = 0
+    for item in items:
+        url = item.get('link')
+        if not url or url in cache:
+            continue
+        data = scrape_fn(url)
+        if data and data.get('status') == 'ok':
+            cache[url] = data
+            new += 1
+            print(f'    + {url.split("/")[-1][:50]}')
+        else:
+            print(f'    - error {url.split("/")[-1][:50]}')
+    if new:
+        with open(os.path.join(DIR, filename), 'w') as f:
+            json.dump({'updated': date.today().isoformat(), 'articles': cache}, f, ensure_ascii=False)
+    return new
+
+
+def update_lomography_articles(items):
+    return update_article_cache('lomography_articles.json', items,
+                                lambda url: scrape_lomography_article(url, resolve_profiles=False))
+
+
+def update_booooooom_articles(items):
+    return update_article_cache('booooooom_articles.json', items, scrape_booooooom_article)
+
+
 def main():
     ts = date.today().isoformat()
     print(f'[{ts}] Generando datos estáticos...')
@@ -223,6 +262,14 @@ def main():
         boom = load_previous_items('booooooom.json')
     print(f'     {len(boom)} artículos')
 
+    print('  4. Lomography articles (cache GitHub Pages)...')
+    new_articles = update_lomography_articles(lomo)
+    print(f'     {new_articles} nuevos | {len(load_article_cache("lomography_articles.json"))} en cache')
+
+    print('  5. Booooooom articles (cache GitHub Pages)...')
+    new_boom_articles = update_booooooom_articles(boom)
+    print(f'     {new_boom_articles} nuevos | {len(load_article_cache("booooooom_articles.json"))} en cache')
+
     all_entries = sorted(colossal + lomo + boom,
                          key=lambda x: x.get('_parsedDate') or x.get('date') or '',
                          reverse=True)
@@ -238,10 +285,11 @@ def main():
 
     print(f'  Guardado: lomography.json, booooooom.json, feeds.json ({len(all_entries)} total)')
 
-    print('  3. Subiendo a GitHub...')
+    print('  6. Subiendo a GitHub...')
     try:
         result = subprocess.run(
-            ['git', 'add', 'lomography.json', 'booooooom.json', 'feeds.json'],
+            ['git', 'add', 'lomography.json', 'booooooom.json', 'feeds.json',
+             'lomography_articles.json', 'booooooom_articles.json'],
             capture_output=True, text=True, cwd=DIR
         )
         result = subprocess.run(
