@@ -6,13 +6,14 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('count-colossal').addEventListener('click', () => setFilter('colossal'));
   document.getElementById('count-lomography').addEventListener('click', () => setFilter('lomography'));
   document.getElementById('count-booooooom').addEventListener('click', () => setFilter('booooooom'));
+  document.getElementById('count-tpj').addEventListener('click', () => setFilter('tpj'));
 });
 
 let __activeFilter = null;
 
 async function loadFeeds() {
-  const [colossal, lomo, boom] = await Promise.all([fetchColossal(), fetchLomography(), fetchBooooooom()]);
-  window.__allEntries = [...colossal, ...lomo, ...boom].sort((a, b) => (b._parsedDate || 0) - (a._parsedDate || 0));
+  const [colossal, lomo, boom, tpj] = await Promise.all([fetchColossal(), fetchLomography(), fetchBooooooom(), fetchTpj()]);
+  window.__allEntries = [...colossal, ...lomo, ...boom, ...tpj].sort((a, b) => (b._parsedDate || 0) - (a._parsedDate || 0));
   if (!window.__allEntries.length) { showEmpty(); return; }
   applyFilter();
 }
@@ -94,6 +95,34 @@ function normalizeBoom(items) {
   }));
 }
 
+async function fetchTpj() {
+  // Try live API first (VPS mode)
+  try {
+    const resp = await fetch('/api/tpj');
+    const data = await resp.json();
+    if (data && data.status === 'ok' && data.items.length) return normalizeTpj(data.items);
+  } catch {}
+  // Fallback: static JSON (GitHub Pages)
+  try {
+    const resp = await fetch('tpj.json');
+    const data = await resp.json();
+    if (data && data.items) return normalizeTpj(data.items);
+  } catch {}
+  return [];
+}
+
+function normalizeTpj(items) {
+  return items.map(i => ({
+    _source: 'tpj',
+    _id: i.link || i._id,
+    _parsedDate: (i.date || i._parsedDate) ? new Date(i.date || i._parsedDate) : null,
+    link: i.link,
+    title: i.title,
+    content: i.content || i.excerpt,
+    thumbnail: i.thumbnail
+  }));
+}
+
 function extractImg(post) {
   if (post.thumbnail) return post.thumbnail;
   const m = (post.content || '').match(/<img[^>]+src=["']([^"']+)["']/);
@@ -106,6 +135,7 @@ function applyFilter() {
   document.getElementById('count-colossal').classList.toggle('active', __activeFilter === 'colossal');
   document.getElementById('count-lomography').classList.toggle('active', __activeFilter === 'lomography');
   document.getElementById('count-booooooom').classList.toggle('active', __activeFilter === 'booooooom');
+  document.getElementById('count-tpj').classList.toggle('active', __activeFilter === 'tpj');
 }
 
 function setFilter(source) {
@@ -124,7 +154,7 @@ function render(entries) {
         <div class="card-overlay"></div>
       </div>
       <div class="card-info">
-        <div class="card-source">${e._source === 'lomography' ? 'Lomography Magazine' : e._source === 'booooooom' ? 'Booooooom' : 'Colossal · Fotografía'}</div>
+        <div class="card-source">${e._source === 'lomography' ? 'Lomography Magazine' : e._source === 'booooooom' ? 'Booooooom' : e._source === 'tpj' ? 'The Photographic Journal' : 'Colossal · Fotografía'}</div>
         <div class="card-title"><a href="${e.link}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${e.title}</a></div>
         <div class="card-meta">
           <span class="card-date">${e._parsedDate ? fmtDate(e._parsedDate) : ''}</span>
@@ -136,10 +166,12 @@ function render(entries) {
     const total = Math.min(entries.length, 100);
   const colossal = entries.slice(0, 100).filter(e => e._source === 'colossal').length;
   const lomo = entries.slice(0, 100).filter(e => e._source === 'lomography').length;
-  const boom = total - colossal - lomo;
+  const boom = entries.slice(0, 100).filter(e => e._source === 'booooooom').length;
+  const tpj = total - colossal - lomo - boom;
   document.getElementById('count-colossal').textContent = `Colossal ${colossal}`;
   document.getElementById('count-lomography').textContent = `Lomography ${lomo}`;
   document.getElementById('count-booooooom').textContent = `Booooooom ${boom}`;
+  document.getElementById('count-tpj').textContent = `Photographic Journal ${tpj}`;
   document.getElementById('footer-info').textContent = total + ' fotografías';
 }
 
@@ -357,6 +389,35 @@ function renderBoomArticle(body, entry, data) {
   body.dataset.lomoImages = JSON.stringify(images.map(i => ({ url: i.url, caption: i.alt || '' })));
 }
 
+function renderTpjArticle(body, entry) {
+  const content = cleanContent(entry.content || '');
+  const images = extractImages(content);
+  const socialLinks = extractSocialLinks(content);
+  const linksHTML = socialLinks.length ? '<div class="modal-links">' + socialLinks.map(l => '<a href="' + l.url + '" target="_blank" rel="noopener" class="modal-link-tag link-' + l.platform + '">' + l.text + '</a>').join('') + '</div>' : '';
+  body.innerHTML = `
+    <div class="modal-tools">
+      ${images.length ? `<button class="modal-tool-btn" onclick="openGallery()">Galería (${images.length})</button>` : ''}
+      <button class="modal-tool-btn" onclick="toggleFullscreen()">Pantalla completa</button>
+      <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>
+    </div>
+    ${linksHTML}
+    <div class="modal-title-group">
+      <h2 class="modal-title">${entry.title}</h2>
+      <div class="modal-meta">
+        <span class="modal-source">The Photographic Journal</span>
+        ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
+      </div>
+    </div>
+    <div class="modal-article">
+      <div class="modal-article-content">${content}</div>
+      <div class="modal-footer" style="padding-top:2rem">
+        <a href="${entry.link}" target="_blank" rel="noopener" class="modal-link-tag">Ver original →</a>
+      </div>
+    </div>
+  `;
+  body.dataset.lomoImages = JSON.stringify(images.map(i => ({ url: i.url, caption: i.caption || '' })));
+}
+
 async function openModal(card) {
   const id = card.dataset.id;
   const source = card.dataset.source;
@@ -445,6 +506,13 @@ async function openModal(card) {
         </div>
       `;
     }
+    return;
+  }
+
+  if (source === 'tpj') {
+    const entry = window.__allEntries?.find(e => e._id === id);
+    if (!entry) { body.innerHTML = '<p class="modal-error">error</p>'; return; }
+    renderTpjArticle(body, entry);
     return;
   }
 

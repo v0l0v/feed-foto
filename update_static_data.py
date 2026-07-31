@@ -16,6 +16,11 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 WP_API = 'https://www.thisiscolossal.com/wp-json/wp/v2/posts?categories=496&per_page=20'
 LOMO_URL = 'https://www.lomography.com/magazine/'
 BOOM_URL = 'https://www.booooooom.com/blog/photo/feed/'
+TPJ_URLS = [
+    'https://thephotographicjournal.com/essays/rss',
+    'https://thephotographicjournal.com/interviews/feed',
+    'https://thephotographicjournal.com/features/feed',
+]
 
 
 def fetch_colossal():
@@ -99,13 +104,13 @@ def fetch_lomography():
     return articles
 
 
-def fetch_booooooom():
+def fetch_rss(url, source, include_content=False, fetch_page_fallback=True):
     try:
-        req = urllib.request.Request(BOOM_URL, headers={'User-Agent': 'Mozilla/5.0'})
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=15) as resp:
             xml_data = resp.read()
     except Exception as e:
-        print(f'  Error Booooooom: {e}')
+        print(f'  Error {source}: {e}')
         return []
 
     articles = []
@@ -136,7 +141,9 @@ def fetch_booooooom():
                 except:
                     pub_date = pub_el.text.strip()[:10]
 
-            content_el = item.find('{http://wellformedweb.org/CommentAPI/}encoded')
+            content_el = item.find('{http://purl.org/rss/1.0/modules/content/}encoded')
+            if content_el is None:
+                content_el = item.find('{http://wellformedweb.org/CommentAPI/}encoded')
             if content_el is None:
                 content_el = item.find('content:encoded')
             if content_el is not None and content_el.text:
@@ -161,7 +168,7 @@ def fetch_booooooom():
                     thumb = url_img
                     break
 
-            if not thumb and link:
+            if not thumb and link and fetch_page_fallback:
                 try:
                     req2 = urllib.request.Request(link, headers={'User-Agent': 'Mozilla/5.0'})
                     with urllib.request.urlopen(req2, timeout=10) as resp2:
@@ -177,18 +184,42 @@ def fetch_booooooom():
             excerpt = re.sub(r'<[^>]+>', '', content)[:300]
             excerpt = unescape(re.sub(r'\s+', ' ', excerpt).strip())
 
-            articles.append({
-                '_source': 'booooooom',
+            article = {
+                '_source': source,
                 'title': title,
                 'link': link,
                 'date': pub_date,
                 'thumbnail': thumb,
                 'excerpt': excerpt
-            })
+            }
+            if include_content:
+                article['content'] = content
+            articles.append(article)
     except ET.ParseError as e:
-        print(f'  Error parsing RSS: {e}')
+        print(f'  Error parsing RSS {source}: {e}')
 
     return articles
+
+
+def fetch_rss_multi(urls, source, **kwargs):
+    articles = []
+    seen = set()
+    for url in urls:
+        for a in fetch_rss(url, source, **kwargs):
+            key = re.sub(r'[^a-z0-9]', '', a['title'].lower())[:40]
+            if key in seen:
+                continue
+            seen.add(key)
+            articles.append(a)
+    return articles
+
+
+def fetch_booooooom():
+    return fetch_rss(BOOM_URL, 'booooooom')
+
+
+def fetch_tpj():
+    return fetch_rss_multi(TPJ_URLS, 'tpj', include_content=True, fetch_page_fallback=False)
 
 
 def load_previous_items(filename):
@@ -276,17 +307,23 @@ def main():
         boom = load_previous_items('booooooom.json')
     print(f'     {len(boom)} artículos')
 
-    print('  4. Lomography articles (cache GitHub Pages)...')
+    print('  4. The Photographic Journal...')
+    tpj = fetch_tpj()
+    if not tpj:
+        tpj = load_previous_items('tpj.json')
+    print(f'     {len(tpj)} artículos')
+
+    print('  5. Lomography articles (cache GitHub Pages)...')
     purge_bad_articles('lomography_articles.json')
     new_articles = update_lomography_articles(lomo)
     print(f'     {new_articles} nuevos | {len(load_article_cache("lomography_articles.json"))} en cache')
 
-    print('  5. Booooooom articles (cache GitHub Pages)...')
+    print('  6. Booooooom articles (cache GitHub Pages)...')
     purge_bad_articles('booooooom_articles.json')
     new_boom_articles = update_booooooom_articles(boom)
     print(f'     {new_boom_articles} nuevos | {len(load_article_cache("booooooom_articles.json"))} en cache')
 
-    all_entries = sorted(colossal + lomo + boom,
+    all_entries = sorted(colossal + lomo + boom + tpj,
                          key=lambda x: x.get('_parsedDate') or x.get('date') or '',
                          reverse=True)
 
@@ -296,15 +333,18 @@ def main():
     with open(os.path.join(DIR, 'booooooom.json'), 'w') as f:
         json.dump({'items': boom, 'count': len(boom), 'updated': ts}, f)
 
+    with open(os.path.join(DIR, 'tpj.json'), 'w') as f:
+        json.dump({'items': tpj, 'count': len(tpj), 'updated': ts}, f)
+
     with open(os.path.join(DIR, 'feeds.json'), 'w') as f:
         json.dump({'items': all_entries, 'count': len(all_entries), 'updated': ts}, f)
 
-    print(f'  Guardado: lomography.json, booooooom.json, feeds.json ({len(all_entries)} total)')
+    print(f'  Guardado: lomography.json, booooooom.json, tpj.json, feeds.json ({len(all_entries)} total)')
 
-    print('  6. Subiendo a GitHub...')
+    print('  7. Subiendo a GitHub...')
     try:
         result = subprocess.run(
-            ['git', 'add', 'lomography.json', 'booooooom.json', 'feeds.json',
+            ['git', 'add', 'lomography.json', 'booooooom.json', 'tpj.json', 'feeds.json',
              'lomography_articles.json', 'booooooom_articles.json'],
             capture_output=True, text=True, cwd=DIR
         )
