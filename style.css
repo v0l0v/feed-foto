@@ -685,6 +685,7 @@ footer {
   max-width: 520px;
   height: 40px;
   accent-color: #ff0100;
+  border-radius: 0;
 }
 
 .podcast-meta {
