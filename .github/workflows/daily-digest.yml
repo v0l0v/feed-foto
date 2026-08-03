@@ -40,15 +40,7 @@ jobs:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
         run: python3 daily_digest.py
 
-      - name: Comprobar créditos Firecrawl
-        id: credits
-        continue-on-error: true
-        env:
-          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
-        run: python3 check_firecrawl_credits.py 30
-
       - name: Actualizar datos estáticos (caches de artículos)
-        if: steps.credits.outcome == 'success'
         env:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
         run: python3 update_static_data.py --keep-lomo

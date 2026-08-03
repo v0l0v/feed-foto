@@ -22,8 +22,8 @@ def save_payload(filename, items, all_entries):
 def main():
     parser = argparse.ArgumentParser(description='Actualiza las listas de feeds (JSON).')
     parser.add_argument('--fresh-lomography', action='store_true',
-                        help='Scrapea Lomography con Firecrawl (1 crédito). '
-                             'Sin esta flag se conserva el último dato de Lomography (0 créditos).')
+                        help='Refresca la lista de Lomography (gratis vía Jina). '
+                             'Sin esta flag se conserva el último dato de Lomography.')
     args = parser.parse_args()
 
     ts = date.today().isoformat()
@@ -41,7 +41,7 @@ def main():
         print(f'     {len(lomo)} artículos')
     else:
         lomo = load_previous_items('lomography.json')
-        print(f'     {len(lomo)} artículos (modo ahorro: sin scrape de Firecrawl)')
+        print(f'     {len(lomo)} artículos (modo ahorro: sin refrescar Lomography)')
 
     print('  3. Booooooom...')
     boom = fetch_booooooom()

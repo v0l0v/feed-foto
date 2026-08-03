@@ -35,15 +35,7 @@ jobs:
           git config user.name "feed-foto bot"
           git config user.email "actions@github.com"
 
-      - name: Comprobar créditos Firecrawl
-        id: credits
-        continue-on-error: true
-        env:
-          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
-        run: python3 check_firecrawl_credits.py 50
-
-      - name: Refrescar Lomography (1 scrape)
-        if: steps.credits.outcome == 'success'
+      - name: Refrescar Lomography (gratis vía Jina, 0 créditos)
         env:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
         run: python3 update_lists.py --fresh-lomography

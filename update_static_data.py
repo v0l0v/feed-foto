@@ -10,7 +10,7 @@ from datetime import date, datetime
 from pathlib import Path
 from html import unescape
 
-from server import firecrawl_scrape, resolve_lomo_article_date, scrape_lomography_article, scrape_booooooom_article, scrape_swan_article
+from server import firecrawl_scrape, parse_magazine_list, scrape_lomography_article, scrape_booooooom_article, scrape_swan_article
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -61,56 +61,7 @@ def fetch_lomography():
     md = firecrawl_scrape(LOMO_URL, timeout=60)
     if not md:
         return []
-
-    articles = []
-    seen = set()
-    matches = list(re.finditer(
-        r'^(?:- )?### \[(.+?)\]\((https://www\.lomography\.com/magazine/[^)]+)\)', md, re.MULTILINE))
-    for i, m in enumerate(matches):
-        title = m.group(1).strip()
-        url = m.group(2).strip()
-        key = re.sub(r'[^a-z0-9]', '', title.lower())[:40]
-        if key in seen:
-            continue
-        seen.add(key)
-
-        start = m.end()
-        end = matches[i + 1].start() if i + 1 < len(matches) else len(md)
-        block = md[m.start():end]
-
-        date_str = ''
-        dm = re.search(r'\b(20\d{2}-\d{2}-\d{2})\b', block)
-        if dm:
-            date_str = dm.group(1)
-        else:
-            date_str = resolve_lomo_article_date(url) or ''
-
-        thumb = ''
-        tm = re.search(r'\[!\[.*?\]\(([^)]+)\)\]', block)
-        if tm:
-            thumb = tm.group(1)
-
-        excerpt_lines = []
-        for line in block.split('\n'):
-            s = line.strip()
-            if not s or s.startswith('###') or s.startswith('[') or s.startswith('written by') or s.startswith('http'):
-                continue
-            if re.match(r'^\[!\[', s) or s.startswith('#'):
-                continue
-            excerpt_lines.append(s)
-        excerpt = ' '.join(excerpt_lines)
-        excerpt = re.sub(r'\[\d+\]\([^)]+\)', '', excerpt).strip()
-
-        articles.append({
-            '_source': 'lomography',
-            'title': title,
-            'link': url,
-            'date': date_str,
-            'thumbnail': thumb,
-            'excerpt': excerpt
-        })
-
-    return articles
+    return parse_magazine_list(md)
 
 
 def fetch_rss(url, source, include_content=False, fetch_page_fallback=True):
@@ -311,7 +262,7 @@ def update_swan_articles(items):
 def main():
     parser = argparse.ArgumentParser(description='Genera datos estáticos (feeds + caches de artículos).')
     parser.add_argument('--keep-lomo', action='store_true',
-                        help='Reutiliza lomography.json sin scrapear la revista con Firecrawl (ahorro de créditos).')
+                        help='Reutiliza lomography.json sin scrapear la revista.')
     args = parser.parse_args()
 
     ts = date.today().isoformat()
@@ -324,7 +275,7 @@ def main():
     print('  2. Lomography...')
     if args.keep_lomo:
         lomo = load_previous_items('lomography.json')
-        print(f'     {len(lomo)} artículos (modo ahorro: sin scrape de Firecrawl)')
+        print(f'     {len(lomo)} artículos (modo ahorro: sin refrescar Lomography)')
     else:
         lomo = fetch_lomography()
         if not lomo:

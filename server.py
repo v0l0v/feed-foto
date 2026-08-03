@@ -17,15 +17,55 @@ def is_rate_limited(text):
     return 'rate limit exceeded' in (text or '').lower()
 
 
-def firecrawl_scrape(url, timeout=60, retries=2):
+JINA_HEADER_RE = re.compile(r'^Title:.*?\nMarkdown Content:\n', re.S)
+
+
+def strip_jina_header(md):
+    return JINA_HEADER_RE.sub('', md, count=1)
+
+
+def fetch_markdown(url, timeout=60, selector=None):
+    headers = {'User-Agent': 'Mozilla/5.0', 'X-Respond-With': 'markdown'}
+    if selector:
+        headers['X-Target-Selector'] = selector
+    try:
+        req = urllib.request.Request('https://r.jina.ai/' + url, headers=headers)
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.read().decode('utf-8', errors='ignore')
+    except Exception:
+        return None
+
+
+def is_bot_challenge(md):
+    return ('Performing security verification' in md or
+            'Just a moment...' in md or
+            'This website uses a security service' in md)
+
+
+def trim_lomo_body(md):
+    # Jina devuelve la página completa: navegación + aviso de cookies antes del H1.
+    m = re.search(r'^# [^\n]+$', md, re.MULTILINE)
+    if m:
+        md = md[m.end():]
+    md = re.sub(r'^\s*(\[\d+\]\([^)]*\)\s*)+', '', md)
+    return md
+
+
+def firecrawl_scrape(url, timeout=60, retries=2, selector=None):
+    # Alternativa principal (gratuita): Jina Reader renderiza JS y devuelve markdown.
+    for attempt in range(retries + 1):
+        md = fetch_markdown(url, timeout=timeout, selector=selector)
+        if md and not is_bot_challenge(md):
+            return strip_jina_header(md)
+        if attempt < retries:
+            time.sleep(5)
+    # Fallback: CLI de Firecrawl (solo si está instalado y hay créditos).
     for attempt in range(retries + 1):
         try:
             result = subprocess.run(
                 ['firecrawl', 'scrape', url, '--only-main-content'],
                 capture_output=True, text=True, timeout=timeout, cwd=DIR
             )
-        except subprocess.TimeoutExpired:
-            return None
         except Exception:
             return None
         md = result.stdout or result.stderr
@@ -39,21 +79,24 @@ def firecrawl_scrape(url, timeout=60, retries=2):
         return md
     return None
 
-def parse_lomo_articles(md):
+def parse_magazine_list(md):
+    md = strip_jina_header(md or '')
     articles = []
     seen = set()
 
-    matches = list(re.finditer(r'^(?:- )?### \[(.+?)\]\((https://www\.lomography\.com/magazine/[^)]+)\)', md, re.MULTILINE))
+    matches = list(re.finditer(
+        r'\[([^\]]+)\]\((https://www\.lomography\.com/magazine/\d+-[^)]+)\)', md))
     for i, m in enumerate(matches):
         title = m.group(1).strip()
         url = m.group(2).strip()
-        key = re.sub(r'[^a-z0-9]', '', title.lower())[:40]
-        if key in seen:
+        if re.fullmatch(r'[\d\W_]+', title) or len(title) < 8:
             continue
-        seen.add(key)
+        if url in seen:
+            continue
+        seen.add(url)
 
         start = m.end()
-        end = matches[i+1].start() if i + 1 < len(matches) else len(md)
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(md)
         block = md[m.start():end]
 
         date = ''
@@ -64,24 +107,24 @@ def parse_lomo_articles(md):
             date = resolve_lomo_article_date(url) or ''
 
         thumb = ''
-        tm = re.search(r'\[!\[.*?\]\(([^)]+)\)\]', block)
+        tm = re.search(r'!\[[^\]]*\]\(([^)]+)\)', block)
         if tm:
             thumb = tm.group(1)
 
         excerpt_lines = []
         for line in block.split('\n'):
             s = line.strip()
-            if not s or s.startswith('###') or s.startswith('[') or s.startswith('written by') or s.startswith('http'):
-                continue
-            if re.match(r'^\[!\[', s):
-                continue
-            if s.startswith('#'):
+            if not s or s.startswith('[') or s.startswith('![') or s.startswith('#') \
+               or s.startswith('*') or s.startswith('http') or s.startswith('on ') \
+               or s.startswith('|') or s.lower().startswith('written by'):
                 continue
             excerpt_lines.append(s)
         excerpt = ' '.join(excerpt_lines)
+        excerpt = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', excerpt)
         excerpt = re.sub(r'\[\d+\]\([^)]+\)', '', excerpt).strip()
 
         articles.append({
+            '_source': 'lomography',
             'title': title,
             'link': url,
             'date': date,
@@ -89,7 +132,11 @@ def parse_lomo_articles(md):
             'excerpt': excerpt
         })
 
-    return articles[:50]
+    return articles
+
+
+def parse_lomo_articles(md):
+    return parse_magazine_list(md)
 
 LOMO_ARTICLE_DATE_CACHE = {}
 
@@ -236,7 +283,9 @@ def scrape_booooooom_article(url):
     now = time.time()
     if url in BOOM_ARTICLE_CACHE and now - BOOM_ARTICLE_CACHE[url]['time'] < 300:
         return BOOM_ARTICLE_CACHE[url]['data']
-    md = firecrawl_scrape(url, timeout=60)
+    md = firecrawl_scrape(url, timeout=60, selector='.post-content')
+    if md and len(md.strip()) < 500:
+        md = firecrawl_scrape(url, timeout=60)
     if not md:
         return None
 
@@ -290,6 +339,26 @@ def scrape_booooooom_article(url):
     BOOM_ARTICLE_CACHE[url] = {'data': data, 'time': now}
     return data
 
+LOMO_CREDIT_BLACKLIST = {'random home', 'search homes', 'home', 'my lomohome',
+                         'lomography', 'shop', 'photos', 'magazine', 'sign up',
+                         'log in', 'login', 'logout', 'cart', 'about', 'blog',
+                         'help', 'contact', 'community', 'explore', 'profile',
+                         'settings', 'account', 'deals', 'store locator',
+                         'start a shop', 'wishlist', 'track order', 'privacy policy',
+                         'terms of use', 'newsletter'}
+
+
+def clean_lomo_credit_name(name):
+    n = (name or '').strip().strip('@').strip()
+    if not n or len(n) < 2:
+        return None
+    if n.lower() in LOMO_CREDIT_BLACKLIST:
+        return None
+    if re.search(r'\s', n):
+        return None
+    return n
+
+
 def scrape_lomography_article(url, resolve_profiles=True):
     now = time.time()
     if url in ARTICLE_CACHE and now - ARTICLE_CACHE[url]['time'] < 300:
@@ -299,21 +368,25 @@ def scrape_lomography_article(url, resolve_profiles=True):
         return None
     idx = re.search(r'## (?:One|\d+) Likes?|## No Comments|Please login to leave a comment|More Interesting Articles', md)
     clean_md = md[:idx.start()] if idx else md
+    clean_md = trim_lomo_body(clean_md)
     images = [{'url': m.group(2), 'alt': m.group(1)} for m in re.finditer(r'!\[([^\]]*)\]\(([^)]+)\)', clean_md)]
     body_md = re.split(r'\nwritten by\b', clean_md, maxsplit=1)[0] if re.search(r'\nwritten by\b', clean_md) else clean_md
     content = md_to_html(body_md)
     credits = []
     seen_names = set()
     for cm in re.finditer(r'\[([^\]]+)\]\((https://www\.lomography\.com/homes/[^)]+)\)', clean_md):
-        name = cm.group(1).strip()
-        if name.lower() not in seen_names:
-            seen_names.add(name.lower())
-            if resolve_profiles:
-                social = resolve_lomo_profile(cm.group(2))
-                if social:
-                    credits.append({'name': name, 'url': social['url']})
-                    continue
-            credits.append({'name': name, 'url': cm.group(2)})
+        name = clean_lomo_credit_name(cm.group(1))
+        if not name:
+            continue
+        if name.lower() in seen_names:
+            continue
+        seen_names.add(name.lower())
+        if resolve_profiles:
+            social = resolve_lomo_profile(cm.group(2))
+            if social:
+                credits.append({'name': name, 'url': social['url']})
+                continue
+        credits.append({'name': name, 'url': cm.group(2)})
     data = {'status': 'ok', 'content': content, 'images': images, 'credits': credits}
     ARTICLE_CACHE[url] = {'data': data, 'time': now}
     return data

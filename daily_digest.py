@@ -4,7 +4,7 @@ import re
 import urllib.request
 from datetime import date, datetime
 
-from server import firecrawl_scrape, resolve_lomo_article_date
+from server import firecrawl_scrape, parse_magazine_list, clean_lomo_credit_name, trim_lomo_body
 from update_static_data import fetch_booooooom, fetch_tpj, fetch_swan, fetch_huck
 
 DIR = os.path.dirname(os.path.abspath(__file__))
@@ -103,46 +103,7 @@ def fetch_lomography_articles():
     md = firecrawl_scrape('https://www.lomography.com/magazine/', timeout=60)
     if not md:
         return []
-    articles = []
-    seen = set()
-    matches = list(re.finditer(
-        r'^(?:- )?### \[(.+?)\]\((https://www\.lomography\.com/magazine/[^)]+)\)', md, re.MULTILINE))
-    for i, m in enumerate(matches):
-        title = m.group(1).strip()
-        url = m.group(2).strip()
-        key = re.sub(r'[^a-z0-9]', '', title.lower())[:40]
-        if key in seen:
-            continue
-        seen.add(key)
-        block = md[m.start():matches[i + 1].start() if i + 1 < len(matches) else len(md)]
-        dm = re.search(r'\b(20\d{2}-\d{2}-\d{2})\b', block)
-        if dm:
-            date_str = dm.group(1)
-        else:
-            date_str = resolve_lomo_article_date(url)
-        if not date_str or date_str != TODAY.isoformat():
-            continue
-        excerpt_lines = []
-        for line in block.split('\n'):
-            s = line.strip()
-            if not s or s.startswith('###') or s.startswith('[') or s.startswith('written by') or s.startswith('http'):
-                continue
-            if re.match(r'^\[!\[', s):
-                continue
-            if s.startswith('#'):
-                continue
-            excerpt_lines.append(s)
-        excerpt = ' '.join(excerpt_lines)
-        excerpt = re.sub(r'\[\d+\]\([^)]+\)', '', excerpt).strip()
-        thumb = ''
-        tm = re.search(r'\[!\[.*?\]\(([^)]+)\)\]', block)
-        if tm:
-            thumb = tm.group(1)
-        articles.append({
-            'title': title, 'link': url, 'date': date_str,
-            'excerpt': excerpt, 'thumbnail': thumb
-        })
-    return articles
+    return [a for a in parse_magazine_list(md) if a.get('date') == TODAY.isoformat()]
 
 def fetch_lomo_article_content(url):
     md = firecrawl_scrape(url, timeout=45)
@@ -150,12 +111,13 @@ def fetch_lomo_article_content(url):
         return None, [], []
     idx = re.search(r'## (?:One|\d+) Likes?|## No Comments|Please login to leave a comment|More Interesting Articles', md)
     clean_md = md[:idx.start()] if idx else md
+    clean_md = trim_lomo_body(clean_md)
     body_md = re.split(r'\nwritten by\b', clean_md, maxsplit=1)[0] if re.search(r'\nwritten by\b', clean_md) else clean_md
     credits = []
     seen_names = set()
     for cm in re.finditer(r'\[([^\]]+)\]\((https://www\.lomography\.com/homes/[^)]+)\)', clean_md):
-        name = cm.group(1).strip()
-        if name.lower() not in seen_names:
+        name = clean_lomo_credit_name(cm.group(1))
+        if name and name.lower() not in seen_names:
             seen_names.add(name.lower())
             credits.append({'name': name, 'url': cm.group(2)})
     images = [m.group(2) for m in re.finditer(r'!\[([^\]]*)\]\(([^)]+)\)', clean_md)]
