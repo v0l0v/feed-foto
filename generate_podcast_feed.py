@@ -41,6 +41,7 @@ def item_lines(entry):
     pub = format_datetime(datetime(d.year, d.month, d.day, 5, 0, 0, tzinfo=timezone.utc))
     title = entry.get('title') or f'Feed·Foto · {date_str}'
     desc = entry.get('description') or ''
+    art = entry.get('image') or COVER
     url = f'{RELEASE}/podcast-{date_str}.mp3'
     size = int(entry.get('size') or 0)
     return [
@@ -51,7 +52,7 @@ def item_lines(entry):
         f'    <pubDate>{pub}</pubDate>',
         f'    <description>{cdata(desc)}</description>',
         f'    <enclosure url="{url}" length="{size}" type="audio/mpeg"/>',
-        f'    <itunes:image href="{COVER}"/>',
+        f'    <itunes:image href="{esc(art)}"/>',
         f'    <itunes:title>{esc(title)}</itunes:title>',
         '    <itunes:author>Feed·Foto</itunes:author>',
         f'    <itunes:summary>{cdata(desc)}</itunes:summary>',

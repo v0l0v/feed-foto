@@ -90,12 +90,17 @@ def process_colossal(post):
     full = re.sub(r'&#8211;', '–', full)
     full = re.sub(r'&#\d+;', '', full)
     full = re.sub(r'\s+', ' ', full).strip()
+    image = ''
+    im = re.search(r'<img[^>]+src="([^"]+)"', html)
+    if im:
+        image = im.group(1)
     return {
         'title': post['title']['rendered'],
         'link': post['link'],
         'photographer': photographer,
         'summary': summary,
         'full_text': full,
+        'image': image,
         'source': 'Colossal'
     }
 
@@ -176,8 +181,19 @@ def process_rss_item(a, label):
         'photographers': None,
         'summary': summary,
         'full_text': full_text,
+        'image': a.get('thumbnail') or '',
         'source': label
     }
+
+
+IMAGE_PRIORITY = ['lomography', 'colossal', 'booooooom', 'swan', 'tpj', 'huck']
+
+def pick_day_image(items_by_source):
+    for key in IMAGE_PRIORITY:
+        for item in items_by_source.get(key) or []:
+            if item.get('image'):
+                return item['image'].split('?')[0]
+    return ''
 
 def render_html(items_by_source):
     total = sum(len(v) for v in items_by_source.values())
@@ -366,6 +382,12 @@ def main():
         f.write(html)
     with open(os.path.join(OUT_DIR, f'{stem}.podcast.md'), 'w') as f:
         f.write(podcast)
+
+    day_image = pick_day_image(items_by_source)
+    if day_image:
+        with open(os.path.join(OUT_DIR, f'{stem}.image'), 'w') as f:
+            f.write(day_image)
+        print(f'  Imagen del día: {day_image[:90]}')
     print(f'  Guardado: {stem}.html, {stem}.podcast.md')
 
 if __name__ == '__main__':

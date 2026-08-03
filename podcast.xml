@@ -6,7 +6,7 @@
 <atom:link href="https://v0l0v.github.io/feed-foto/podcast.xml" rel="self" type="application/rss+xml"/>
 <description>Resumen diario en audio de inspiración fotográfica: Colossal, Lomography Magazine, Booooooom, The Photographic Journal, Swann Galleries y Huck Magazine.</description>
 <language>es</language>
-<lastBuildDate>Mon, 03 Aug 2026 19:29:39 +0000</lastBuildDate>
+<lastBuildDate>Mon, 03 Aug 2026 19:32:53 +0000</lastBuildDate>
 <image><url>https://v0l0v.github.io/feed-foto/podcast-cover.png</url><title>Feed·Foto — podcast diario</title><link>https://v0l0v.github.io/feed-foto/</link></image>
 <itunes:image href="https://v0l0v.github.io/feed-foto/podcast-cover.png"/>
 <itunes:author>Feed·Foto</itunes:author>
@@ -25,7 +25,7 @@ Recupera la nostalgia de enviar y recibir copias físicas de tus fotos analógic
 **Recap: Birmingham Design Festival LomoWalk**
 Explora el lado más experimental de la fotografía callejera con este resumen del paseo fotográfico por el barrio creativo de Digbeth. Con cámaras LomoApparat y lentes de caleidoscopio, los participantes capturaron el vibrante arte urbano de Birmingham a través de exposiciones múltiples y colores irreales.]]></description>
     <enclosure url="https://github.com/v0l0v/feed-foto/releases/download/episodios/podcast-2026-08-03.mp3" length="577872" type="audio/mpeg"/>
-    <itunes:image href="https://v0l0v.github.io/feed-foto/podcast-cover.png"/>
+    <itunes:image href="https://cdn.assets.lomography.com/43/3335124a65cdb74b7f121fdda63dcaf7e2eaf8/512x341x1.jpg"/>
     <itunes:title>Feed·Foto · 3 de agosto de 2026</itunes:title>
     <itunes:author>Feed·Foto</itunes:author>
     <itunes:summary><![CDATA[**Collecting Mailbox Memories: Stories from the Lomographers’ Print Exchange**
