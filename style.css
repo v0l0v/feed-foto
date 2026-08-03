@@ -755,8 +755,8 @@ footer {
   gap: 0.4rem;
   align-items: center;
   flex-wrap: wrap;
-  font-size: 0.8rem;
-  letter-spacing: 0.12em;
+  font-size: 0.85rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: rgba(240,236,228,0.4);
 }
