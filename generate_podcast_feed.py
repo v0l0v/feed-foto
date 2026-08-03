@@ -6,6 +6,7 @@ from email.utils import format_datetime
 DIR = os.path.dirname(os.path.abspath(__file__))
 SITE = 'https://v0l0v.github.io/feed-foto'
 RELEASE = 'https://github.com/v0l0v/feed-foto/releases/download/episodios'
+COVER = f'{SITE}/podcast-cover.png'
 META_PATH = os.path.join(DIR, 'podcast_meta.json')
 OUT_PATH = os.path.join(DIR, 'podcast.xml')
 
@@ -50,6 +51,7 @@ def item_lines(entry):
         f'    <pubDate>{pub}</pubDate>',
         f'    <description>{cdata(desc)}</description>',
         f'    <enclosure url="{url}" length="{size}" type="audio/mpeg"/>',
+        f'    <itunes:image href="{COVER}"/>',
         f'    <itunes:title>{esc(title)}</itunes:title>',
         '    <itunes:author>Feed·Foto</itunes:author>',
         f'    <itunes:summary>{cdata(desc)}</itunes:summary>',
@@ -72,6 +74,8 @@ def main():
         f'<description>{CHANNEL_DESC}</description>',
         '<language>es</language>',
         f'<lastBuildDate>{now}</lastBuildDate>',
+        f'<image><url>{COVER}</url><title>Feed·Foto — podcast diario</title><link>{SITE}/</link></image>',
+        f'<itunes:image href="{COVER}"/>',
         '<itunes:author>Feed·Foto</itunes:author>',
         '<itunes:subtitle>Resumen diario de inspiración fotográfica</itunes:subtitle>',
         f'<itunes:summary>{CHANNEL_DESC}</itunes:summary>',
