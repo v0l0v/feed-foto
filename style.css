@@ -681,23 +681,93 @@ footer {
 }
 
 .podcast-card audio {
+  display: none;
+}
+
+.podcast-player {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   width: 100%;
   max-width: 520px;
   height: 40px;
-  accent-color: #ff0100;
-  border-radius: 0;
 }
 
-.podcast-card audio::-webkit-media-controls-panel,
-.podcast-card audio::-webkit-media-controls-play-button,
-.podcast-card audio::-webkit-media-controls-mute-button,
-.podcast-card audio::-webkit-media-controls-current-time-display,
-.podcast-card audio::-webkit-media-controls-time-remaining-display,
-.podcast-card audio::-webkit-media-controls-timeline,
-.podcast-card audio::-webkit-media-controls-timeline-container,
-.podcast-card audio::-webkit-media-controls-volume-slider,
-.podcast-card audio::-webkit-media-controls-volume-slider-container {
-  border-radius: 0 !important;
+.podcast-player button {
+  background: none;
+  border: 1px solid rgba(255,1,0,0.4);
+  color: #ff0100;
+  width: 32px;
+  height: 32px;
+  border-radius: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.podcast-player button:hover {
+  background: #ff0100;
+  color: #fff;
+}
+
+.podcast-player .podcast-progress {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 0;
+  position: relative;
+  cursor: pointer;
+}
+.podcast-player .podcast-progress-fill {
+  height: 100%;
+  background: #ff0100;
+  border-radius: 0;
+  width: 0%;
+  pointer-events: none;
+}
+
+.podcast-player .podcast-time {
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  color: rgba(240,236,228,0.5);
+  min-width: 3.5rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.podcast-player input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 80px;
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 0;
+  outline: none;
+  flex-shrink: 0;
+}
+.podcast-player input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #ff0100;
+  border-radius: 0;
+  cursor: pointer;
+}
+.podcast-player input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: #ff0100;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+}
+.podcast-player input[type="range"]::-moz-range-track {
+  background: rgba(255,255,255,0.1);
+  height: 4px;
+  border-radius: 0;
 }
 
 .podcast-meta {
