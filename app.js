@@ -343,7 +343,6 @@ function podcastCardHTML() {
       <div class="podcast-body">
         <div class="podcast-badge"><span class="podcast-dot"></span>Podcast · Punto de vista</div>
         <h3 class="podcast-title">${esc(title)}</h3>
-        <p class="podcast-desc">${esc(truncated)}</p>
         <audio controls preload="none" src="${url}"></audio>
         <div class="podcast-meta">
           ${dur ? `<span>${dur}</span>` : ''}
