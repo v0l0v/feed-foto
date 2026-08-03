@@ -16,6 +16,10 @@ const RSS_PROXIES = [
 const REFRESH_MS = 10 * 60 * 1000;
 const ALL_SOURCES = ['colossal', 'lomography', 'booooooom', 'tpj', 'swan', 'huck'];
 const SOURCES_KEY = 'feedfoto.sources';
+const PODCAST_RELEASE = 'https://github.com/v0l0v/puntodevista/releases/download/episodios';
+const PODCAST_COVER = 'podcast-cover.png';
+
+let __podcast = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   loadSources();
@@ -48,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   });
   loadFeeds();
+  fetchPodcastMeta();
   setInterval(() => { if (!document.hidden) refreshFeeds(); }, REFRESH_MS);
 });
 
@@ -76,6 +81,17 @@ async function refreshFeeds() {
   const modalOpen = !document.getElementById('modal').classList.contains('hide');
   await loadFeeds();
   if (!modalOpen) window.scrollTo(0, scroll);
+}
+
+async function fetchPodcastMeta() {
+  try {
+    const resp = await fetch('podcast_meta.json', { cache: 'no-store' });
+    const data = await resp.json();
+    if (!Array.isArray(data) || !data.length) return;
+    const sorted = [...data].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    __podcast = { ...sorted[sorted.length - 1], num: sorted.length };
+    applyFilter();
+  } catch {}
 }
 
 async function fetchColossal() {
@@ -299,9 +315,51 @@ function applyFilter() {
     __sources.size === 0 ? 'todas' : `${__sources.size}`;
 }
 
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function fmtDur(sec) {
+  sec = parseInt(sec || 0, 10);
+  if (!sec) return '';
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  const mm = String(m).padStart(2, '0');
+  const ss = String(s).padStart(2, '0');
+  return h ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
+}
+
+function podcastCardHTML() {
+  if (!__podcast) return '';
+  const e = __podcast;
+  const title = `Episodio ${e.num} · ${fmtDate(new Date(e.date + 'T00:00:00'))}`;
+  const url = `${PODCAST_RELEASE}/podcast-${e.date}.mp3`;
+  const img = e.image || PODCAST_COVER;
+  const dur = fmtDur(e.duration);
+  const desc = e.description || '';
+  const truncated = desc.length > 260 ? desc.slice(0, 260) + '…' : desc;
+  return `<div class="card podcast-card" data-podcast="1">
+    <div class="podcast-inner">
+      <div class="podcast-art"><img src="${esc(img)}" alt="" loading="lazy"></div>
+      <div class="podcast-body">
+        <div class="podcast-badge"><span class="podcast-dot"></span>Podcast · Punto de vista</div>
+        <h3 class="podcast-title">${esc(title)}</h3>
+        <p class="podcast-desc">${esc(truncated)}</p>
+        <audio controls preload="none" src="${url}"></audio>
+        <div class="podcast-meta">
+          ${dur ? `<span>${dur}</span>` : ''}
+          <span>${esc(fmtDate(new Date(e.date + 'T00:00:00')))}</span>
+          <a href="podcast.xml" target="_blank" rel="noopener">feed RSS</a>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
 function render(entries) {
   const el = document.getElementById('entries');
-  el.innerHTML = entries.slice(0, 100).map(e => {
+  el.innerHTML = podcastCardHTML() + entries.slice(0, 100).map(e => {
     const src = extractImg(e);
     return `<div class="card" data-color="?" data-id="${e._id}" data-source="${e._source}" onclick="openModal(this)">
       <div class="card-inner">

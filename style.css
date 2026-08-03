@@ -618,3 +618,100 @@ footer {
 .link-threads { background: #101010; }
 .link-web { background: #d0d0d0; color: #000; }
 .link-web:hover { background: #e0e0e0; }
+
+/* PODCAST CARD */
+.podcast-card {
+  grid-column: 1 / -1;
+  aspect-ratio: auto;
+  background: linear-gradient(180deg, #141414, #0f0f0f);
+  border: 1px solid rgba(255,1,0,0.22);
+  border-left: 3px solid #ff0100;
+  border-radius: 4px;
+}
+
+.podcast-inner {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  align-items: center;
+}
+
+.podcast-art {
+  flex-shrink: 0;
+  width: 180px;
+  height: 180px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #0a0a0a;
+}
+.podcast-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.podcast-body { flex: 1; min-width: 0; }
+
+.podcast-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ff0100;
+  margin-bottom: 0.6rem;
+}
+.podcast-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff0100;
+  box-shadow: 0 0 8px rgba(255,1,0,0.8);
+}
+
+.podcast-title {
+  font-size: 1.1rem;
+  font-weight: 400;
+  line-height: 1.3;
+  margin-bottom: 0.5rem;
+}
+
+.podcast-desc {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: rgba(240,236,228,0.7);
+  margin-bottom: 0.9rem;
+}
+
+.podcast-card audio {
+  width: 100%;
+  max-width: 520px;
+  height: 40px;
+  accent-color: #ff0100;
+}
+
+.podcast-meta {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(240,236,228,0.4);
+  margin-top: 0.6rem;
+}
+.podcast-meta a { color: rgba(255,1,0,0.8); text-decoration: none; }
+.podcast-meta a:hover { color: #ff0100; }
+
+@media (max-width: 720px) {
+  .podcast-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  .podcast-art {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+  .podcast-card audio { max-width: 100%; }
+}
