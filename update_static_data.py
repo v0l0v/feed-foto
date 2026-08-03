@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import re
@@ -308,6 +309,11 @@ def update_swan_articles(items):
 
 
 def main():
+    parser = argparse.ArgumentParser(description='Genera datos estáticos (feeds + caches de artículos).')
+    parser.add_argument('--keep-lomo', action='store_true',
+                        help='Reutiliza lomography.json sin scrapear la revista con Firecrawl (ahorro de créditos).')
+    args = parser.parse_args()
+
     ts = date.today().isoformat()
     print(f'[{ts}] Generando datos estáticos...')
 
@@ -316,10 +322,14 @@ def main():
     print(f'     {len(colossal)} artículos')
 
     print('  2. Lomography...')
-    lomo = fetch_lomography()
-    if not lomo:
+    if args.keep_lomo:
         lomo = load_previous_items('lomography.json')
-    print(f'     {len(lomo)} artículos')
+        print(f'     {len(lomo)} artículos (modo ahorro: sin scrape de Firecrawl)')
+    else:
+        lomo = fetch_lomography()
+        if not lomo:
+            lomo = load_previous_items('lomography.json')
+        print(f'     {len(lomo)} artículos')
 
     print('  3. Booooooom...')
     boom = fetch_booooooom()

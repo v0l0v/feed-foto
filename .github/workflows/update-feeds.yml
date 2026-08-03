@@ -15,7 +15,7 @@ permissions:
 jobs:
   update-lists:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -23,19 +23,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Instalar firecrawl CLI
-        run: npm install -g firecrawl-cli
-
       - name: Configurar git
         run: |
           git config user.name "feed-foto bot"
           git config user.email "actions@github.com"
 
-      - name: Actualizar listas de feeds
-        env:
-          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+      - name: Actualizar listas de feeds (sin Firecrawl, 0 créditos)
         run: python3 update_lists.py

@@ -1,21 +1,21 @@
-name: Digest diario
+name: Refrescar Lomography
 
 on:
   schedule:
-    - cron: '0 4 * * *'
+    - cron: '0 10,18 * * *'
   workflow_dispatch:
 
 concurrency:
-  group: daily-digest
+  group: feed-update
   cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
-  digest:
+  refresh-lomo:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -35,27 +35,15 @@ jobs:
           git config user.name "feed-foto bot"
           git config user.email "actions@github.com"
 
-      - name: Generar digest diario (prioridad máxima)
-        env:
-          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
-        run: python3 daily_digest.py
-
       - name: Comprobar créditos Firecrawl
         id: credits
         continue-on-error: true
         env:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
-        run: python3 check_firecrawl_credits.py 30
+        run: python3 check_firecrawl_credits.py 50
 
-      - name: Actualizar datos estáticos (caches de artículos)
+      - name: Refrescar Lomography (1 scrape)
         if: steps.credits.outcome == 'success'
         env:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
-        run: python3 update_static_data.py --keep-lomo
-
-      - name: Commit y push de digests
-        run: |
-          git add resumenes
-          git commit -m "chore: daily digest $(date +%Y-%m-%d)" || echo "nada que commitear"
-          git pull --rebase --autostash || true
-          git push
+        run: python3 update_lists.py --fresh-lomography
