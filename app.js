@@ -32,9 +32,21 @@ function initPodcastPlayers() {
     const player = btn.closest('.podcast-player');
     if (!player) return;
     const url = player.dataset.url;
-    const audio = player._audio || (player._audio = new Audio(url));
-    player._audio = audio;
-
+    let audio = player._audio;
+    if (!audio) {
+      audio = new Audio(url);
+      audio.preload = 'none';
+      player._audio = audio;
+      audio.addEventListener('timeupdate', () => updatePodcastProgress(player, audio));
+      audio.addEventListener('loadedmetadata', () => updatePodcastProgress(player, audio));
+      audio.addEventListener('ended', () => {
+        btn.textContent = '▶';
+        const fill = player.querySelector('.podcast-progress-fill');
+        if (fill) fill.style.width = '0%';
+        const time = player.querySelector('.podcast-time');
+        if (time) time.textContent = '0:00 / ' + (audio.duration ? fmtDur(Math.floor(audio.duration)) : '--:--');
+      });
+    }
     if (audio.paused) {
       audio.play().catch(() => {});
       btn.textContent = '⏸';
@@ -48,33 +60,26 @@ function initPodcastPlayers() {
     const vol = e.target.closest('.podcast-volume');
     if (vol) {
       const player = vol.closest('.podcast-player');
-      if (player && player._audio) player._audio.volume = vol.value;
+      if (player && player._audio) player._audio.volume = parseFloat(vol.value);
       return;
     }
     const bar = e.target.closest('.podcast-progress');
     if (bar) {
       const player = bar.closest('.podcast-player');
-      if (!player || !player._audio) return;
+      if (!player || !player._audio || !player._audio.duration) return;
       const rect = bar.getBoundingClientRect();
       const pct = (e.clientX - rect.left) / rect.width;
-      player._audio.currentTime = pct * (player._audio.duration || 0);
+      player._audio.currentTime = pct * player._audio.duration;
     }
   });
+}
 
-  entry.addEventListener('timeupdate', (e) => {
-    const audio = e.target;
-    if (!audio || audio.readyState === 0) return;
-    const player = audio.closest('.podcast-player');
-    if (!player) return;
-    const fill = player.querySelector('.podcast-progress-fill');
-    const time = player.querySelector('.podcast-time');
-    if (fill) fill.style.width = ((audio.currentTime / (audio.duration || 1)) * 100) + '%';
-    if (time) {
-      const cur = audio.currentTime;
-      const tot = audio.duration || 0;
-      time.textContent = fmtDur(Math.floor(cur)) + ' / ' + fmtDur(Math.floor(tot));
-    }
-  }, true);
+function updatePodcastProgress(player, audio) {
+  if (!audio.duration) return;
+  const fill = player.querySelector('.podcast-progress-fill');
+  const time = player.querySelector('.podcast-time');
+  if (fill) fill.style.width = ((audio.currentTime / audio.duration) * 100) + '%';
+  if (time) time.textContent = fmtDur(Math.floor(audio.currentTime)) + ' / ' + fmtDur(Math.floor(audio.duration));
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -394,15 +399,12 @@ function podcastCardHTML() {
   const url = `${PODCAST_RELEASE}/podcast-${e.date}.mp3`;
   const img = e.image || PODCAST_COVER;
   const dur = fmtDur(e.duration);
-  const desc = e.description || '';
-  const truncated = desc.length > 260 ? desc.slice(0, 260) + '…' : desc;
   return `<div class="card podcast-card" data-podcast="1">
     <div class="podcast-inner">
       <div class="podcast-art"><img src="${esc(img)}" alt="" loading="lazy"></div>
       <div class="podcast-body">
         <div class="podcast-badge"><span class="podcast-dot"></span>Podcast · Punto de vista</div>
         <h3 class="podcast-title">${esc(title)}</h3>
-        <p class="podcast-desc">${esc(truncated)}</p>
         <div class="podcast-player" data-url="${esc(url)}">
           <button class="podcast-play" aria-label="Reproducir">▶</button>
           <div class="podcast-progress"><div class="podcast-progress-fill"></div></div>
