@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+<title>Feed·Foto — podcast diario</title>
+<link>https://v0l0v.github.io/feed-foto/</link>
+<atom:link href="https://v0l0v.github.io/feed-foto/podcast.xml" rel="self" type="application/rss+xml"/>
+<description>Resumen diario en audio de inspiración fotográfica: Colossal, Lomography Magazine, Booooooom, The Photographic Journal, Swann Galleries y Huck Magazine.</description>
+<language>es</language>
+<lastBuildDate>Mon, 03 Aug 2026 19:25:49 +0000</lastBuildDate>
+<itunes:author>Feed·Foto</itunes:author>
+<itunes:subtitle>Resumen diario de inspiración fotográfica</itunes:subtitle>
+<itunes:summary>Resumen diario en audio de inspiración fotográfica: Colossal, Lomography Magazine, Booooooom, The Photographic Journal, Swann Galleries y Huck Magazine.</itunes:summary>
+<itunes:explicit>false</itunes:explicit>
+<itunes:category text="Arts"><itunes:category text="Visual Arts"/></itunes:category>
+  <item>
+    <title>Feed·Foto · 3 de agosto de 2026</title>
+    <link>https://v0l0v.github.io/feed-foto/</link>
+    <guid isPermaLink="true">https://github.com/v0l0v/feed-foto/releases/download/episodios/podcast-2026-08-03.mp3</guid>
+    <pubDate>Mon, 03 Aug 2026 05:00:00 +0000</pubDate>
+    <description><![CDATA[**Collecting Mailbox Memories: Stories from the Lomographers’ Print Exchange**
+Recupera la nostalgia de enviar y recibir copias físicas de tus fotos analógicas, creando conexiones tangibles entre fotógrafos de distintos continentes. Es una invitación a explorar el soporte físico y la narrativa personal que hay detrás de cada sobre que llega al buzón.
+
+**Recap: Birmingham Design Festival LomoWalk**
+Explora el lado más experimental de la fotografía callejera con este resumen del paseo fotográfico por el barrio creativo de Digbeth. Con cámaras LomoApparat y lentes de caleidoscopio, los participantes capturaron el vibrante arte urbano de Birmingham a través de exposiciones múltiples y colores irreales.]]></description>
+    <enclosure url="https://github.com/v0l0v/feed-foto/releases/download/episodios/podcast-2026-08-03.mp3" length="577872" type="audio/mpeg"/>
+    <itunes:title>Feed·Foto · 3 de agosto de 2026</itunes:title>
+    <itunes:author>Feed·Foto</itunes:author>
+    <itunes:summary><![CDATA[**Collecting Mailbox Memories: Stories from the Lomographers’ Print Exchange**
+Recupera la nostalgia de enviar y recibir copias físicas de tus fotos analógicas, creando conexiones tangibles entre fotógrafos de distintos continentes. Es una invitación a explorar el soporte físico y la narrativa personal que hay detrás de cada sobre que llega al buzón.
+
+**Recap: Birmingham Design Festival LomoWalk**
+Explora el lado más experimental de la fotografía callejera con este resumen del paseo fotográfico por el barrio creativo de Digbeth. Con cámaras LomoApparat y lentes de caleidoscopio, los participantes capturaron el vibrante arte urbano de Birmingham a través de exposiciones múltiples y colores irreales.]]></itunes:summary>
+    <itunes:explicit>false</itunes:explicit>
+  </item>
+</channel>
+</rss>
