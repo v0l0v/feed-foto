@@ -37,3 +37,26 @@ jobs:
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
         run: python3 daily_telegram.py
+
+      - name: Publicar episodio en GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view episodios >/dev/null 2>&1 || \
+            gh release create episodios --title "Feed·Foto · podcast" --notes "Episodios diarios del podcast de feed·foto"
+          MP3="podcast/podcast-$(date +%F).mp3"
+          if [ -f "$MP3" ]; then
+            gh release upload episodios "$MP3" --clobber
+          else
+            echo "Sin episodio hoy"
+          fi
+
+      - name: Regenerar feed RSS del podcast
+        run: python3 generate_podcast_feed.py
+
+      - name: Commit y push del feed
+        run: |
+          git add podcast_meta.json podcast.xml
+          git commit -m "chore: podcast feed $(date +%F)" || echo "nada que commitear"
+          git pull --rebase --autostash || true
+          git push

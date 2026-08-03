@@ -11,6 +11,8 @@ import requests
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.join(DIR, 'resumenes')
+PODCAST_DIR = os.path.join(DIR, 'podcast')
+META_PATH = os.path.join(DIR, 'podcast_meta.json')
 
 CONFIG = {}
 try:
@@ -212,10 +214,34 @@ def main():
     if not clean_text_audio:
         print('  ❌ No hay texto locutable para audio')
         return
-    audio_path = os.path.join(OUT_DIR, f'podcast-{today.isoformat()}.mp3')
+    os.makedirs(PODCAST_DIR, exist_ok=True)
+    audio_path = os.path.join(PODCAST_DIR, f'podcast-{today.isoformat()}.mp3')
     if generate_audio(clean_text_audio, audio_path):
         size = os.path.getsize(audio_path)
         print(f'  Audio generado ({size/1024:.0f} KB)')
+
+        description = parts[0].strip() if len(parts) == 2 else summary.strip()
+        mes = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+               'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'][today.month - 1]
+        title = f'Feed·Foto · {today.day} de {mes} de {today.year}'
+        meta = []
+        if os.path.exists(META_PATH):
+            try:
+                with open(META_PATH, encoding='utf-8') as f:
+                    meta = json.load(f)
+            except Exception:
+                meta = []
+        meta = [m for m in meta if m.get('date') != today.isoformat()]
+        meta.append({
+            'date': today.isoformat(),
+            'title': title,
+            'description': description,
+            'size': size,
+        })
+        with open(META_PATH, 'w', encoding='utf-8') as f:
+            json.dump(meta, f, ensure_ascii=False, indent=2)
+        print(f'  Meta del podcast actualizado ({len(meta)} episodios)')
+
         print('  Enviando audio a Telegram...')
         result = send_telegram_audio(audio_path, header.strip())
         if result and result.get('ok'):
