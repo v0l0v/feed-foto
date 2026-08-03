@@ -20,67 +20,6 @@ const PODCAST_RELEASE = 'https://github.com/v0l0v/puntodevista/releases/download
 const PODCAST_COVER = 'podcast-cover.png';
 
 let __podcast = null;
-let __podcastAudio = null;
-
-function initPodcastPlayers() {
-  const entry = document.getElementById('entries');
-  if (!entry) return;
-
-  entry.addEventListener('click', (e) => {
-    const btn = e.target.closest('.podcast-play');
-    if (!btn) return;
-    const player = btn.closest('.podcast-player');
-    if (!player) return;
-    const url = player.dataset.url;
-    let audio = player._audio;
-    if (!audio) {
-      audio = new Audio(url);
-      audio.preload = 'none';
-      player._audio = audio;
-      audio.addEventListener('timeupdate', () => updatePodcastProgress(player, audio));
-      audio.addEventListener('loadedmetadata', () => updatePodcastProgress(player, audio));
-      audio.addEventListener('ended', () => {
-        btn.textContent = '▶';
-        const fill = player.querySelector('.podcast-progress-fill');
-        if (fill) fill.style.width = '0%';
-        const time = player.querySelector('.podcast-time');
-        if (time) time.textContent = '0:00 / ' + (audio.duration ? fmtDur(Math.floor(audio.duration)) : '--:--');
-      });
-    }
-    if (audio.paused) {
-      audio.play().catch(() => {});
-      btn.textContent = '⏸';
-    } else {
-      audio.pause();
-      btn.textContent = '▶';
-    }
-  });
-
-  entry.addEventListener('input', (e) => {
-    const vol = e.target.closest('.podcast-volume');
-    if (vol) {
-      const player = vol.closest('.podcast-player');
-      if (player && player._audio) player._audio.volume = parseFloat(vol.value);
-      return;
-    }
-    const bar = e.target.closest('.podcast-progress');
-    if (bar) {
-      const player = bar.closest('.podcast-player');
-      if (!player || !player._audio || !player._audio.duration) return;
-      const rect = bar.getBoundingClientRect();
-      const pct = (e.clientX - rect.left) / rect.width;
-      player._audio.currentTime = pct * player._audio.duration;
-    }
-  });
-}
-
-function updatePodcastProgress(player, audio) {
-  if (!audio.duration) return;
-  const fill = player.querySelector('.podcast-progress-fill');
-  const time = player.querySelector('.podcast-time');
-  if (fill) fill.style.width = ((audio.currentTime / audio.duration) * 100) + '%';
-  if (time) time.textContent = fmtDur(Math.floor(audio.currentTime)) + ' / ' + fmtDur(Math.floor(audio.duration));
-}
 
 document.addEventListener('DOMContentLoaded', () => {
   loadSources();
@@ -114,7 +53,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   loadFeeds();
   fetchPodcastMeta();
-  initPodcastPlayers();
   setInterval(() => { if (!document.hidden) refreshFeeds(); }, REFRESH_MS);
 });
 
@@ -405,12 +343,8 @@ function podcastCardHTML() {
       <div class="podcast-body">
         <div class="podcast-badge"><span class="podcast-dot"></span>Podcast · Punto de vista</div>
         <h3 class="podcast-title">${esc(title)}</h3>
-        <div class="podcast-player" data-url="${esc(url)}">
-          <button class="podcast-play" aria-label="Reproducir">▶</button>
-          <div class="podcast-progress"><div class="podcast-progress-fill"></div></div>
-          <span class="podcast-time">0:00 / ${dur || '--:--'}</span>
-          <input type="range" class="podcast-volume" min="0" max="1" step="0.05" value="1" aria-label="Volumen">
-        </div>
+        <p class="podcast-desc">${esc(truncated)}</p>
+        <audio controls preload="none" src="${url}"></audio>
         <div class="podcast-meta">
           ${dur ? `<span>${dur}</span>` : ''}
           <span>${esc(fmtDate(new Date(e.date + 'T00:00:00')))}</span>
