@@ -13,13 +13,23 @@
   <div class="header-inner">
       <span class="logo" onclick="toggleFullscreen()" style="cursor:pointer">⌥ feed·foto</span>
     <div class="header-controls">
-      <span id="count-colossal" class="pill">Colossal 0</span>
-      <span id="count-lomography" class="pill">Lomography 0</span>
-      <span id="count-booooooom" class="pill">Booooooom 0</span>
-      <span id="count-tpj" class="pill">Photographic Journal 0</span>
-      <span id="count-swan" class="pill">Swann 0</span>
-      <span id="count-huck" class="pill">Huck 0</span>
+      <button id="sources-btn" class="sources-btn" type="button" aria-haspopup="true" aria-expanded="false">
+        fuentes <span id="sources-btn-count">todas</span> ⌄
+      </button>
     </div>
+  </div>
+  <div id="sources-panel" class="hide">
+    <label class="source-row all" id="source-all-row">
+      <input type="checkbox" id="chk-all" checked>
+      <span>Todas</span>
+      <span class="src-count" id="count-all">0</span>
+    </label>
+    <label class="source-row" data-src="colossal"><input type="checkbox" data-src="colossal"><span>Colossal</span><span class="src-count" id="count-colossal">0</span></label>
+    <label class="source-row" data-src="lomography"><input type="checkbox" data-src="lomography"><span>Lomography</span><span class="src-count" id="count-lomography">0</span></label>
+    <label class="source-row" data-src="booooooom"><input type="checkbox" data-src="booooooom"><span>Booooooom</span><span class="src-count" id="count-booooooom">0</span></label>
+    <label class="source-row" data-src="tpj"><input type="checkbox" data-src="tpj"><span>Photographic Journal</span><span class="src-count" id="count-tpj">0</span></label>
+    <label class="source-row" data-src="swan"><input type="checkbox" data-src="swan"><span>Swann</span><span class="src-count" id="count-swan">0</span></label>
+    <label class="source-row" data-src="huck"><input type="checkbox" data-src="huck"><span>Huck</span><span class="src-count" id="count-huck">0</span></label>
   </div>
 </header>
 

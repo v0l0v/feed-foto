@@ -54,23 +54,69 @@ header {
   text-transform: uppercase;
 }
 
-.pill {
-  padding: 0.2rem 0.6rem;
-  border-radius: 2px;
-  background: #d0d0d0;
-  color: #000;
+.sources-btn {
+  background: rgba(255,255,255,0.08);
+  color: #ddd;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 4px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   cursor: pointer;
   transition: background 0.15s;
 }
-.pill:hover {
-  background: #e83030;
-  color: #fff;
+.sources-btn:hover {
+  background: rgba(255,255,255,0.14);
 }
-.pill.active {
-  background: #e83030;
-  color: #fff;
+.sources-btn #sources-btn-count {
+  opacity: 0.6;
 }
-.sep { opacity: 0.2; }
+
+#sources-panel {
+  position: absolute;
+  top: 100%;
+  right: 1rem;
+  z-index: 60;
+  min-width: 250px;
+  background: #171717;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+}
+#sources-panel.hide { display: none; }
+
+.source-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.5rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ccc;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.source-row:hover { background: rgba(255,255,255,0.05); }
+.source-row input {
+  accent-color: #e83030;
+  cursor: pointer;
+}
+.source-row .src-count {
+  margin-left: auto;
+  opacity: 0.45;
+  font-variant-numeric: tabular-nums;
+}
+.source-row.all {
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-radius: 0;
+  margin-bottom: 0.2rem;
+  padding-bottom: 0.6rem;
+}
 
 #loader {
   text-align: center;

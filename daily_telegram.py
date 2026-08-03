@@ -232,9 +232,6 @@ def main():
         except Exception:
             duration = 0
 
-        mes = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-               'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'][today.month - 1]
-        title = f'Feed·Foto · {today.day} de {mes} de {today.year}'
         day_image = ''
         img_path = os.path.join(OUT_DIR, f'digest-{today.isoformat()}.image')
         if os.path.exists(img_path):
@@ -253,7 +250,6 @@ def main():
         meta = [m for m in meta if m.get('date') != today.isoformat()]
         meta.append({
             'date': today.isoformat(),
-            'title': title,
             'description': description,
             'image': day_image,
             'size': size,

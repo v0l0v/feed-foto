@@ -44,11 +44,16 @@ def load_meta():
         return []
 
 
-def item_lines(entry):
+def fmt_es(date_str):
+    d = datetime.strptime(date_str, '%Y-%m-%d')
+    return f'{d.day} de {MESES[d.month - 1]} de {d.year}'
+
+
+def item_lines(entry, num):
     date_str = entry['date']
     d = datetime.strptime(date_str, '%Y-%m-%d')
     pub = format_datetime(datetime(d.year, d.month, d.day, 5, 0, 0, tzinfo=timezone.utc))
-    title = entry.get('title') or f'Feed·Foto · {date_str}'
+    title = f'Episodio {num} · {fmt_es(date_str)}'
     desc = entry.get('description') or ''
     art = entry.get('image') or COVER
     dur = fmt_duration(entry.get('duration'))
@@ -98,8 +103,8 @@ def main():
         '<itunes:explicit>false</itunes:explicit>',
         '<itunes:category text="Arts"><itunes:category text="Visual Arts"/></itunes:category>',
     ]
-    for entry in meta:
-        lines.extend(item_lines(entry))
+    for num, entry in enumerate(meta, 1):
+        lines.extend(item_lines(entry, num))
     lines.append('</channel>')
     lines.append('</rss>')
 

@@ -14,19 +14,55 @@ const RSS_PROXIES = [
   u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
 ];
 const REFRESH_MS = 10 * 60 * 1000;
+const ALL_SOURCES = ['colossal', 'lomography', 'booooooom', 'tpj', 'swan', 'huck'];
+const SOURCES_KEY = 'feedfoto.sources';
 
 document.addEventListener('DOMContentLoaded', () => {
+  loadSources();
+  const btn = document.getElementById('sources-btn');
+  const panel = document.getElementById('sources-panel');
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = panel.classList.toggle('hide') === false;
+    btn.setAttribute('aria-expanded', open);
+  });
+  document.addEventListener('click', (e) => {
+    if (!panel.classList.contains('hide') && !panel.contains(e.target)) {
+      panel.classList.add('hide');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  });
+  document.getElementById('chk-all').addEventListener('change', (e) => {
+    if (e.target.checked) __sources.clear();
+    else __sources = new Set(ALL_SOURCES);
+    saveSources();
+    applyFilter();
+  });
+  ALL_SOURCES.forEach(src => {
+    document.querySelector(`.source-row[data-src="${src}"] input`)
+      .addEventListener('change', (e) => {
+        if (e.target.checked) __sources.add(src);
+        else __sources.delete(src);
+        saveSources();
+        applyFilter();
+      });
+  });
   loadFeeds();
   setInterval(() => { if (!document.hidden) refreshFeeds(); }, REFRESH_MS);
-  document.getElementById('count-colossal').addEventListener('click', () => setFilter('colossal'));
-  document.getElementById('count-lomography').addEventListener('click', () => setFilter('lomography'));
-  document.getElementById('count-booooooom').addEventListener('click', () => setFilter('booooooom'));
-  document.getElementById('count-tpj').addEventListener('click', () => setFilter('tpj'));
-  document.getElementById('count-swan').addEventListener('click', () => setFilter('swan'));
-  document.getElementById('count-huck').addEventListener('click', () => setFilter('huck'));
 });
 
-let __activeFilter = null;
+let __sources = new Set();
+
+function loadSources() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SOURCES_KEY));
+    if (Array.isArray(saved)) __sources = new Set(saved);
+  } catch {}
+}
+
+function saveSources() {
+  localStorage.setItem(SOURCES_KEY, JSON.stringify([...__sources]));
+}
 
 async function loadFeeds() {
   const [colossal, lomo, boom, tpj, swan, huck] = await Promise.all([fetchColossal(), fetchLomography(), fetchBooooooom(), fetchTpj(), fetchSwan(), fetchHuck()]);
@@ -242,20 +278,20 @@ function extractImg(post) {
   return m ? m[1] : null;
 }
 
-function applyFilter() {
-  const entries = __activeFilter ? window.__allEntries.filter(e => e._source === __activeFilter) : window.__allEntries;
-  render(entries);
-  document.getElementById('count-colossal').classList.toggle('active', __activeFilter === 'colossal');
-  document.getElementById('count-lomography').classList.toggle('active', __activeFilter === 'lomography');
-  document.getElementById('count-booooooom').classList.toggle('active', __activeFilter === 'booooooom');
-  document.getElementById('count-tpj').classList.toggle('active', __activeFilter === 'tpj');
-  document.getElementById('count-swan').classList.toggle('active', __activeFilter === 'swan');
-  document.getElementById('count-huck').classList.toggle('active', __activeFilter === 'huck');
+function isSourceVisible(src) {
+  return __sources.size === 0 || __sources.has(src);
 }
 
-function setFilter(source) {
-  __activeFilter = __activeFilter === source ? null : source;
-  applyFilter();
+function applyFilter() {
+  const entries = window.__allEntries.filter(e => isSourceVisible(e._source));
+  render(entries);
+  document.getElementById('chk-all').checked = __sources.size === 0;
+  ALL_SOURCES.forEach(src => {
+    document.querySelector(`.source-row[data-src="${src}"] input`)
+      .checked = isSourceVisible(src);
+  });
+  document.getElementById('sources-btn-count').textContent =
+    __sources.size === 0 ? 'todas' : `${__sources.size}`;
 }
 
 function render(entries) {
@@ -278,20 +314,22 @@ function render(entries) {
     </div>`;
   }).join('');
   document.getElementById('loader').classList.add('hide');
-    const total = Math.min(entries.length, 100);
+  const total = Math.min(entries.length, 100);
   const colossal = entries.slice(0, 100).filter(e => e._source === 'colossal').length;
   const lomo = entries.slice(0, 100).filter(e => e._source === 'lomography').length;
   const boom = entries.slice(0, 100).filter(e => e._source === 'booooooom').length;
   const tpj = entries.slice(0, 100).filter(e => e._source === 'tpj').length;
   const swan = entries.slice(0, 100).filter(e => e._source === 'swan').length;
   const huck = total - colossal - lomo - boom - tpj - swan;
-  document.getElementById('count-colossal').textContent = `Colossal ${colossal}`;
-  document.getElementById('count-lomography').textContent = `Lomography ${lomo}`;
-  document.getElementById('count-booooooom').textContent = `Booooooom ${boom}`;
-  document.getElementById('count-tpj').textContent = `Photographic Journal ${tpj}`;
-  document.getElementById('count-swan').textContent = `Swann ${swan}`;
-  document.getElementById('count-huck').textContent = `Huck ${huck}`;
+  document.getElementById('count-colossal').textContent = String(colossal);
+  document.getElementById('count-lomography').textContent = String(lomo);
+  document.getElementById('count-booooooom').textContent = String(boom);
+  document.getElementById('count-tpj').textContent = String(tpj);
+  document.getElementById('count-swan').textContent = String(swan);
+  document.getElementById('count-huck').textContent = String(huck);
+  document.getElementById('count-all').textContent = String(total);
   document.getElementById('footer-info').textContent = total + ' fotografías';
+  document.getElementById('empty').classList.toggle('hide', entries.length > 0);
 }
 
 function fmtDate(d) {
