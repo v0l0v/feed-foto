@@ -653,7 +653,7 @@ footer {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 0.5rem;
+  font-size: 0.85rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #ff0100;
@@ -665,7 +665,7 @@ footer {
 }
 
 .podcast-title {
-  font-size: 0.85rem;
+  font-size: 1rem;
   font-weight: 400;
   line-height: 1.2;
   margin: 0;
