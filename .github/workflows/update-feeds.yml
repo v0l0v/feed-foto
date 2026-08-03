@@ -30,6 +30,11 @@ jobs:
       - name: Instalar firecrawl CLI
         run: npm install -g firecrawl-cli
 
+      - name: Configurar git
+        run: |
+          git config user.name "feed-foto bot"
+          git config user.email "actions@github.com"
+
       - name: Actualizar listas de feeds
         env:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}

@@ -77,8 +77,11 @@ def main():
             ['git', 'commit', '-m', f'chore: update static feeds {ts}'],
             capture_output=True, text=True, cwd=DIR
         )
-        if 'nothing to commit' in res.stdout or res.returncode != 0:
+        if 'nothing to commit' in res.stdout:
             print('     Sin cambios')
+            return
+        if res.returncode != 0:
+            print(f'     ⚠️ Error commit: {res.stderr[:300]}')
             return
         pull = subprocess.run(
             ['git', 'pull', '--rebase', '--autostash'],
