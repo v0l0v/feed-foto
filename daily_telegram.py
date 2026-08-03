@@ -220,7 +220,18 @@ def main():
         size = os.path.getsize(audio_path)
         print(f'  Audio generado ({size/1024:.0f} KB)')
 
-        description = parts[0].strip() if len(parts) == 2 else summary.strip()
+        description = clean_text(parts[0]) if len(parts) == 2 else clean_text(summary)
+
+        duration = 0
+        try:
+            probe = subprocess.run(
+                ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_format', audio_path],
+                capture_output=True, text=True, timeout=30)
+            if probe.returncode == 0:
+                duration = int(float(json.loads(probe.stdout)['format']['duration']))
+        except Exception:
+            duration = 0
+
         mes = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
                'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'][today.month - 1]
         title = f'Feed·Foto · {today.day} de {mes} de {today.year}'
@@ -246,6 +257,7 @@ def main():
             'description': description,
             'image': day_image,
             'size': size,
+            'duration': duration,
         })
         with open(META_PATH, 'w', encoding='utf-8') as f:
             json.dump(meta, f, ensure_ascii=False, indent=2)

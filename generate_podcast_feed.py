@@ -27,6 +27,15 @@ def cdata(s):
     return f'<![CDATA[{s}]]>'
 
 
+def fmt_duration(sec):
+    sec = int(sec or 0)
+    if sec <= 0:
+        return ''
+    h, rem = divmod(sec, 3600)
+    m, s = divmod(rem, 60)
+    return f'{h}:{m:02d}:{s:02d}' if h else f'{m}:{s:02d}'
+
+
 def load_meta():
     try:
         with open(META_PATH, encoding='utf-8') as f:
@@ -42,9 +51,10 @@ def item_lines(entry):
     title = entry.get('title') or f'Feed·Foto · {date_str}'
     desc = entry.get('description') or ''
     art = entry.get('image') or COVER
+    dur = fmt_duration(entry.get('duration'))
     url = f'{RELEASE}/podcast-{date_str}.mp3'
     size = int(entry.get('size') or 0)
-    return [
+    lines = [
         '  <item>',
         f'    <title>{esc(title)}</title>',
         f'    <link>{SITE}/</link>',
@@ -53,12 +63,17 @@ def item_lines(entry):
         f'    <description>{cdata(desc)}</description>',
         f'    <enclosure url="{url}" length="{size}" type="audio/mpeg"/>',
         f'    <itunes:image href="{esc(art)}"/>',
+    ]
+    if dur:
+        lines.append(f'    <itunes:duration>{dur}</itunes:duration>')
+    lines.extend([
         f'    <itunes:title>{esc(title)}</itunes:title>',
         '    <itunes:author>Feed·Foto</itunes:author>',
         f'    <itunes:summary>{cdata(desc)}</itunes:summary>',
         '    <itunes:explicit>false</itunes:explicit>',
         '  </item>',
-    ]
+    ])
+    return lines
 
 
 def main():
