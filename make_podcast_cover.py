@@ -16,6 +16,18 @@ def font(name, size):
     return ImageFont.truetype(os.path.join(FONT_DIR, name), size)
 
 
+def glyph_font(size):
+    candidates = [
+        '/usr/share/fonts/truetype/noto/NotoSansSymbols-Medium.ttf',
+        '/usr/share/fonts/truetype/noto/NotoSansSymbols-Regular.ttf',
+        os.path.join(FONT_DIR, 'DejaVuSans.ttf'),
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return ImageFont.truetype(c, size)
+    return ImageFont.truetype(candidates[0], size)
+
+
 def main():
     img = Image.new('RGB', (SIZE, SIZE), BG)
     d = ImageDraw.Draw(img)
@@ -24,11 +36,11 @@ def main():
     d.rounded_rectangle([pad, pad, SIZE - pad, SIZE - pad], radius=90,
                         outline=MUTED, width=3)
 
-    f_glyph = font('DejaVuSans.ttf', 470)
+    f_glyph = glyph_font(430)
     f_word = font('DejaVuSans-ExtraLight.ttf', 150)
     f_sub = font('DejaVuSans.ttf', 74)
 
-    d.text((SIZE / 2, 560), '⌥', font=f_glyph, fill=FG, anchor='mm')
+    d.text((SIZE / 2, 560), '⛶', font=f_glyph, fill=FG, anchor='mm')
     d.text((SIZE / 2, 950), 'feed·foto', font=f_word, fill=LIGHT, anchor='mm')
     d.line([(430, 1080), (970, 1080)], fill=FG, width=5)
     d.text((SIZE / 2, 1210), 'PODCAST DIARIO', font=f_sub, fill=FG,
