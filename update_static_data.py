@@ -405,6 +405,13 @@ def main():
             print('     Sin cambios')
             return
         result = subprocess.run(
+            ['git', 'pull', '--rebase', '--autostash'],
+            capture_output=True, text=True, cwd=DIR
+        )
+        if result.returncode != 0:
+            print(f'     ⚠️ Rebase fallido: {result.stderr[:200]}')
+            return
+        result = subprocess.run(
             ['git', 'push'],
             capture_output=True, text=True, cwd=DIR
         )

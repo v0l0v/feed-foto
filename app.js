@@ -1,8 +1,23 @@
 const WP_API = 'https://www.thisiscolossal.com/wp-json/wp/v2/posts?categories=496&per_page=20';
 const POST_API = 'https://www.thisiscolossal.com/wp-json/wp/v2/posts';
 
+const BOOM_FEEDS = ['https://www.booooooom.com/blog/photo/feed/'];
+const TPJ_FEEDS = [
+  'https://thephotographicjournal.com/essays/rss',
+  'https://thephotographicjournal.com/interviews/feed',
+  'https://thephotographicjournal.com/features/feed',
+];
+const HUCK_FEEDS = ['https://www.huckmag.com/topic/photography/feed'];
+
+const RSS_PROXIES = [
+  u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+  u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
+];
+const REFRESH_MS = 10 * 60 * 1000;
+
 document.addEventListener('DOMContentLoaded', () => {
   loadFeeds();
+  setInterval(() => { if (!document.hidden) refreshFeeds(); }, REFRESH_MS);
   document.getElementById('count-colossal').addEventListener('click', () => setFilter('colossal'));
   document.getElementById('count-lomography').addEventListener('click', () => setFilter('lomography'));
   document.getElementById('count-booooooom').addEventListener('click', () => setFilter('booooooom'));
@@ -18,6 +33,13 @@ async function loadFeeds() {
   window.__allEntries = [...colossal, ...lomo, ...boom, ...tpj, ...swan, ...huck].sort((a, b) => (b._parsedDate || 0) - (a._parsedDate || 0));
   if (!window.__allEntries.length) { showEmpty(); return; }
   applyFilter();
+}
+
+async function refreshFeeds() {
+  const scroll = window.scrollY;
+  const modalOpen = !document.getElementById('modal').classList.contains('hide');
+  await loadFeeds();
+  if (!modalOpen) window.scrollTo(0, scroll);
 }
 
 async function fetchColossal() {
@@ -42,19 +64,7 @@ async function fetchColossal() {
 }
 
 async function fetchLomography() {
-  // Try live API first (VPS mode)
-  try {
-    const resp = await fetch('/api/lomography');
-    const data = await resp.json();
-    if (data && data.status === 'ok' && data.items.length) return normalizeLomo(data.items);
-  } catch {}
-  // Fallback: static JSON (GitHub Pages)
-  try {
-    const resp = await fetch('lomography.json');
-    const data = await resp.json();
-    if (data && data.items) return normalizeLomo(data.items);
-  } catch {}
-  return [];
+  return fetchApiOrJson('/api/lomography', 'lomography.json', normalizeLomo);
 }
 
 function normalizeLomo(items) {
@@ -69,20 +79,91 @@ function normalizeLomo(items) {
   }));
 }
 
-async function fetchBooooooom() {
-  // Try live API first (VPS mode)
+async function fetchWithTimeout(url, ms) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
   try {
-    const resp = await fetch('/api/booooooom');
+    return await fetch(url, { signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function extractRssThumb(html) {
+  const m = (html || '').match(/<img[^>]+src="([^"]+)"/);
+  if (!m) return null;
+  if (/facebook\.com|google|tracking/.test(m[1].toLowerCase())) return null;
+  return m[1];
+}
+
+async function fetchRssLive(source, feedUrls) {
+  for (const proxy of RSS_PROXIES) {
+    try {
+      const items = [];
+      const seen = new Set();
+      for (const url of feedUrls) {
+        const resp = await fetchWithTimeout(proxy(url), 12000);
+        if (!resp.ok) continue;
+        const text = await resp.text();
+        const doc = new DOMParser().parseFromString(text, 'application/xml');
+        for (const el of [...doc.querySelectorAll('item')]) {
+          const title = el.querySelector('title')?.textContent?.trim();
+          const link = el.querySelector('link')?.textContent?.trim();
+          if (!title || !link) continue;
+          const key = title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 40);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const pub = el.querySelector('pubDate')?.textContent?.trim();
+          const content = el.querySelector('content\\:encoded, description')?.textContent || '';
+          items.push({
+            _source: source,
+            _id: link,
+            _parsedDate: pub ? new Date(pub) : null,
+            link,
+            title,
+            content,
+            thumbnail: extractRssThumb(content)
+          });
+        }
+      }
+      if (items.length) return items;
+    } catch {}
+  }
+  return null;
+}
+
+async function fetchApiOrJson(apiPath, jsonFile, normalize) {
+  try {
+    const resp = await fetch(apiPath);
     const data = await resp.json();
-    if (data && data.status === 'ok' && data.items.length) return normalizeBoom(data.items);
+    if (data && data.status === 'ok' && data.items.length) return normalize(data.items);
   } catch {}
-  // Fallback: static JSON (GitHub Pages)
   try {
-    const resp = await fetch('booooooom.json');
+    const resp = await fetch(jsonFile, { cache: 'no-store' });
     const data = await resp.json();
-    if (data && data.items) return normalizeBoom(data.items);
+    if (data && data.items) return normalize(data.items);
   } catch {}
   return [];
+}
+
+function enrichContent(live, fallback) {
+  const byLink = new Map((fallback || []).map(i => [i.link, i]));
+  return live.map(i => {
+    const f = byLink.get(i.link);
+    if (f && (f.content || '').length > (i.content || '').length) {
+      return { ...i, content: f.content };
+    }
+    return i;
+  });
+}
+
+async function fetchBooooooom() {
+  const [live, fallback] = await Promise.all([
+    fetchRssLive('booooooom', BOOM_FEEDS),
+    fetchApiOrJson('/api/booooooom', 'booooooom.json', normalizeBoom),
+  ]);
+  if (live && live.length) return enrichContent(live, fallback);
+  return fallback;
 }
 
 function normalizeBoom(items) {
@@ -98,19 +179,12 @@ function normalizeBoom(items) {
 }
 
 async function fetchTpj() {
-  // Try live API first (VPS mode)
-  try {
-    const resp = await fetch('/api/tpj');
-    const data = await resp.json();
-    if (data && data.status === 'ok' && data.items.length) return normalizeTpj(data.items);
-  } catch {}
-  // Fallback: static JSON (GitHub Pages)
-  try {
-    const resp = await fetch('tpj.json');
-    const data = await resp.json();
-    if (data && data.items) return normalizeTpj(data.items);
-  } catch {}
-  return [];
+  const [live, fallback] = await Promise.all([
+    fetchRssLive('tpj', TPJ_FEEDS),
+    fetchApiOrJson('/api/tpj', 'tpj.json', normalizeTpj),
+  ]);
+  if (live && live.length) return enrichContent(live, fallback);
+  return fallback;
 }
 
 function normalizeTpj(items) {
@@ -126,19 +200,7 @@ function normalizeTpj(items) {
 }
 
 async function fetchSwan() {
-  // Try live API first (VPS mode)
-  try {
-    const resp = await fetch('/api/swan');
-    const data = await resp.json();
-    if (data && data.status === 'ok' && data.items.length) return normalizeSwan(data.items);
-  } catch {}
-  // Fallback: static JSON (GitHub Pages)
-  try {
-    const resp = await fetch('swan.json');
-    const data = await resp.json();
-    if (data && data.items) return normalizeSwan(data.items);
-  } catch {}
-  return [];
+  return fetchApiOrJson('/api/swan', 'swan.json', normalizeSwan);
 }
 
 function normalizeSwan(items) {
@@ -154,19 +216,12 @@ function normalizeSwan(items) {
 }
 
 async function fetchHuck() {
-  // Try live API first (VPS mode)
-  try {
-    const resp = await fetch('/api/huck');
-    const data = await resp.json();
-    if (data && data.status === 'ok' && data.items.length) return normalizeHuck(data.items);
-  } catch {}
-  // Fallback: static JSON (GitHub Pages)
-  try {
-    const resp = await fetch('huck.json');
-    const data = await resp.json();
-    if (data && data.items) return normalizeHuck(data.items);
-  } catch {}
-  return [];
+  const [live, fallback] = await Promise.all([
+    fetchRssLive('huck', HUCK_FEEDS),
+    fetchApiOrJson('/api/huck', 'huck.json', normalizeHuck),
+  ]);
+  if (live && live.length) return enrichContent(live, fallback);
+  return fallback;
 }
 
 function normalizeHuck(items) {
