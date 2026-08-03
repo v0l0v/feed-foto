@@ -414,6 +414,7 @@ function podcastCardHTML() {
         <div class="podcast-meta">
           ${dur ? `<span>${dur}</span>` : ''}
           <span>${esc(fmtDate(new Date(e.date + 'T00:00:00')))}</span>
+          <span class="podcast-ai">Generado por IA</span>
           <a href="podcast.xml" target="_blank" rel="noopener">feed RSS</a>
         </div>
       </div>

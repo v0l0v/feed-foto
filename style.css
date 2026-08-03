@@ -762,6 +762,7 @@ footer {
 }
 .podcast-meta a { color: rgba(255,1,0,0.8); text-decoration: none; }
 .podcast-meta a:hover { color: #ff0100; }
+.podcast-ai { color: rgba(240,236,228,0.25); font-style: italic; }
 
 @media (max-width: 720px) {
   .podcast-card { grid-column: span 1; }
