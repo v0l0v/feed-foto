@@ -12,10 +12,20 @@ import requests
 DIR = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.join(DIR, 'resumenes')
 
-CONFIG = json.load(open(os.path.join(DIR, 'config.json')))
-TG_TOKEN = CONFIG['TG_TOKEN']
-TG_CHAT_ID = CONFIG['TG_CHAT_ID']
-GEMINI_KEY = CONFIG['GEMINI_KEY']
+CONFIG = {}
+try:
+    CONFIG = json.load(open(os.path.join(DIR, 'config.json')))
+except Exception:
+    pass
+
+
+def _cfg(key):
+    return os.environ.get(key) or CONFIG.get(key)
+
+
+TG_TOKEN = _cfg('TG_TOKEN')
+TG_CHAT_ID = _cfg('TG_CHAT_ID')
+GEMINI_KEY = _cfg('GEMINI_KEY')
 GEMINI_MODEL = 'gemini-3-flash-preview'
 GEMINI_URL = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_KEY}'
 

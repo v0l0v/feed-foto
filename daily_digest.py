@@ -5,11 +5,28 @@ import urllib.request
 from datetime import date, datetime
 
 from server import firecrawl_scrape, resolve_lomo_article_date
+from update_static_data import fetch_booooooom, fetch_tpj, fetch_swan, fetch_huck
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.join(DIR, 'resumenes')
 TODAY = date.today()
 WP_API = 'https://www.thisiscolossal.com/wp-json/wp/v2/posts'
+
+SOURCES = [
+    ('colossal', 'Colossal · Fotografía'),
+    ('lomography', 'Lomography Magazine'),
+    ('booooooom', 'Booooooom'),
+    ('tpj', 'The Photographic Journal'),
+    ('swan', 'Swann Galleries'),
+    ('huck', 'Huck Magazine'),
+]
+
+RSS_SOURCES = [
+    ('booooooom', 'Booooooom', fetch_booooooom),
+    ('tpj', 'The Photographic Journal', fetch_tpj),
+    ('swan', 'Swann Galleries', fetch_swan),
+    ('huck', 'Huck Magazine', fetch_huck),
+]
 
 EMOJI_RE = re.compile(
     '[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF'
@@ -184,7 +201,24 @@ def process_lomo(article):
         'source': 'Lomography'
     }
 
-def render_html(colossal_items, lomo_items):
+def process_rss_item(a, label):
+    content = a.get('content') or a.get('excerpt') or ''
+    full_text = clean_text(content)
+    summary = clean_text(a.get('excerpt') or content)
+    if len(summary) > 400:
+        summary = summary[:397] + '…'
+    return {
+        'title': a['title'],
+        'link': a['link'],
+        'photographer': None,
+        'photographers': None,
+        'summary': summary,
+        'full_text': full_text,
+        'source': label
+    }
+
+def render_html(items_by_source):
+    total = sum(len(v) for v in items_by_source.values())
     parts = ['''<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -199,6 +233,8 @@ h1{font-size:1.6rem;font-weight:700;margin-bottom:0.25rem;letter-spacing:-0.02em
 .sub{color:#888;font-size:0.9rem;margin-bottom:2rem}
 .source{font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:0.5rem;margin-top:2.5rem}
 .source.colossal{color:#d4a017}.source.lomography{color:#e25555}
+.source.booooooom{color:#c2410c}.source.tpj{color:#2f6f6f}
+.source.swan{color:#7c3aed}.source.huck{color:#0f766e}
 .card{background:#fff;border-radius:12px;padding:1.5rem;margin-bottom:1rem;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
 .card h2{font-size:1.1rem;font-weight:600;margin-bottom:0.5rem}
 .card h2 a{color:#222;text-decoration:none}
@@ -215,34 +251,27 @@ hr{border:none;border-top:1px solid #eee;margin:2rem 0}
 <body>
 <div class="container">
 <h1>Inspiración fotográfica</h1>
-<p class="sub">''' + TODAY.isoformat() + ''' · ''' + str(len(colossal_items) + len(lomo_items)) + ''' artículos</p>
+<p class="sub">''' + TODAY.isoformat() + ''' · ''' + str(total) + ''' artículos</p>
 ''']
 
-    if colossal_items:
-        parts.append('<div class="source colossal">Colossal · Fotografía</div>')
-        for item in colossal_items:
+    for key, label in SOURCES:
+        items = items_by_source.get(key) or []
+        if not items:
+            continue
+        parts.append(f'<div class="source {key}">{label}</div>')
+        for item in items:
             photo = ''
-            if item['photographer']:
+            if item.get('photographer'):
                 photo = f'<div class="photographer"><strong>Fotógrafo:</strong> {item["photographer"]}</div>'
+            elif item.get('photographers'):
+                photo = '<div class="photographer"><strong>Fotógrafos:</strong> ' + ', '.join(item['photographers']) + '</div>'
             parts.append(f'''<div class="card">
 <h2><a href="{item['link']}">{item['title']}</a></h2>
 <div class="sum">{item['summary']}</div>
 {photo}
 </div>''')
 
-    if lomo_items:
-        parts.append('<div class="source lomography">Lomography Magazine</div>')
-        for item in lomo_items:
-            photos = ''
-            if item['photographers']:
-                photos = '<div class="photographer"><strong>Fotógrafos:</strong> ' + ', '.join(item['photographers']) + '</div>'
-            parts.append(f'''<div class="card">
-<h2><a href="{item['link']}">{item['title']}</a></h2>
-<div class="sum">{item['summary']}</div>
-{photos}
-</div>''')
-
-    if not colossal_items and not lomo_items:
+    if total == 0:
         parts.append('<p style="color:#888">No hubo artículos hoy.</p>')
 
     parts.append(f'''</div>
@@ -277,25 +306,25 @@ def text_summary(item):
     lines.append(f'  Resumen: {s}')
     return '\n'.join(lines) + '\n'
 
-def render_text(colossal, lomo):
+def render_text(items_by_source):
+    total = sum(len(v) for v in items_by_source.values())
     lines = [f'INSPIRACIÓN FOTOGRÁFICA · {TODAY.isoformat()}',
-             f'{len(colossal) + len(lomo)} artículos', '', '=' * 50, '']
-    if colossal:
-        lines.append('COLOSSAL · FOTOGRAFÍA')
+             f'{total} artículos', '', '=' * 50, '']
+    for key, label in SOURCES:
+        items = items_by_source.get(key) or []
+        if not items:
+            continue
+        lines.append(label.upper())
         lines.append('-' * 30)
-        for item in colossal:
+        for item in items:
             lines.append(text_summary(item))
-    if lomo:
-        lines.append('LOMography MAGAZINE')
-        lines.append('-' * 30)
-        for item in lomo:
-            lines.append(text_summary(item))
-    if not colossal and not lomo:
+    if total == 0:
         lines.append('No hubo artículos hoy.')
     return '\n'.join(lines)
 
-def render_podcast(colossal, lomo):
+def render_podcast(items_by_source):
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    total = sum(len(v) for v in items_by_source.values())
     lines = [f'# Instrucciones para podcast diario · {TODAY.isoformat()}', '',
              'Eres un productor de podcast especializado en fotografía. Tu tarea es:', '',
              '1. **Leer** el texto completo de cada artículo a continuación.',
@@ -315,27 +344,22 @@ def render_podcast(colossal, lomo):
              '',
              '## Contenido del día',
              '']
-    if colossal:
-        lines.append('### Colossal · Fotografía')
+    for key, label in SOURCES:
+        items = items_by_source.get(key) or []
+        if not items:
+            continue
+        lines.append(f'### {label}')
         lines.append('')
-        for item in colossal:
+        for item in items:
             lines.append(f'**{item["title"]}**')
             if item.get('photographer'):
                 lines.append(f'Fotógrafo: {item["photographer"]}')
-            lines.append('')
-            lines.append(clean_text(item['full_text']))
-            lines.append('')
-    if lomo:
-        lines.append('### Lomography Magazine')
-        lines.append('')
-        for item in lomo:
-            lines.append(f'**{item["title"]}**')
-            if item.get('photographers'):
+            elif item.get('photographers'):
                 lines.append(f'Fotógrafos: {", ".join(item["photographers"])}')
             lines.append('')
             lines.append(clean_text(item['full_text']))
             lines.append('')
-    if not colossal and not lomo:
+    if total == 0:
         lines.append('No hubo artículos hoy.')
     return '\n'.join(lines)
 
@@ -344,12 +368,15 @@ def main():
     ts = datetime.now().isoformat()
     print(f'[{ts}] Generando digest de {TODAY}...')
 
+    items_by_source = {}
+
     print('  1. Colossal...')
     posts = fetch_colossal_articles()
     colossal = []
     for p in posts:
         print(f'    → {p["title"]["rendered"][:60]}')
         colossal.append(process_colossal(p))
+    items_by_source['colossal'] = colossal
     print(f'    {len(colossal)} artículos')
 
     print('  2. Lomography...')
@@ -358,10 +385,20 @@ def main():
     for a in lomo_articles:
         print(f'    → {a["title"][:60]}')
         lomo.append(process_lomo(a))
+    items_by_source['lomography'] = lomo
     print(f'    {len(lomo)} artículos')
 
-    html = render_html(colossal, lomo)
-    podcast = render_podcast(colossal, lomo)
+    print('  3. Booooooom, TPJ, Swann, Huck (RSS)...')
+    for key, label, fn in RSS_SOURCES:
+        articles = [a for a in fn() if a.get('date') == TODAY.isoformat()]
+        items = [process_rss_item(a, label) for a in articles]
+        items_by_source[key] = items
+        for item in items:
+            print(f'    → {item["title"][:60]}')
+        print(f'    {len(items)} artículos')
+
+    html = render_html(items_by_source)
+    podcast = render_podcast(items_by_source)
     stem = f'digest-{TODAY.isoformat()}'
     with open(os.path.join(OUT_DIR, f'{stem}.html'), 'w') as f:
         f.write(html)

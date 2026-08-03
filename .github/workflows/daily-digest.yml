@@ -1,0 +1,58 @@
+name: Digest diario y podcast
+
+on:
+  schedule:
+    - cron: '30 21 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependencias
+        run: |
+          npm install -g firecrawl-cli
+          pip install requests edge-tts
+
+      - name: Configurar git
+        run: |
+          git config user.name "feed-foto bot"
+          git config user.email "actions@github.com"
+
+      - name: Generar digest diario
+        env:
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+        run: python3 daily_digest.py
+
+      - name: Enviar resumen y podcast a Telegram
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
+        run: python3 daily_telegram.py
+
+      - name: Actualizar datos estáticos (caches de artículos)
+        env:
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+        run: python3 update_static_data.py
+
+      - name: Commit y push de digests
+        run: |
+          git add resumenes
+          git commit -m "chore: daily digest $(date +%Y-%m-%d)" || echo "nada que commitear"
+          git pull --rebase --autostash || true
+          git push
