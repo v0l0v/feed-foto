@@ -84,6 +84,14 @@ header {
 .sources-btn:hover {
   background: rgba(255,255,255,0.14);
 }
+.podcast-btn {
+  display: inline-block;
+  text-decoration: none;
+}
+.podcast-btn:hover {
+  border-color: rgba(255,1,0,0.5);
+  color: #ff0100;
+}
 .sources-btn #sources-btn-count {
   opacity: 0.6;
 }
@@ -551,7 +559,7 @@ footer {
   .card-info { padding: 1.5rem 1rem 1rem; }
   .card-title { font-size: 0.85rem; }
   .header-inner { padding: 0.8rem 1rem; }
-  .sources-btn, #sources-panel { display: none; }
+  #sources-btn, #sources-panel { display: none; }
 }
 
 /* PHOTOGRAPHERS */
