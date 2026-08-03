@@ -396,7 +396,8 @@ function podcastCardHTML() {
   const e = __podcast;
   const title = `Episodio ${e.num} · ${fmtDate(new Date(e.date + 'T00:00:00'))}`;
   const url = `${PODCAST_RELEASE}/podcast-${e.date}.mp3`;
-  const img = e.image || PODCAST_COVER;
+  const images = e.images || [];
+  const img = images.length ? images[Math.floor(Math.random() * images.length)] : (e.image || PODCAST_COVER);
   const dur = fmtDur(e.duration);
   return `<div class="card podcast-card" data-podcast="1">
     <div class="podcast-inner">

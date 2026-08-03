@@ -240,6 +240,15 @@ def main():
                     day_image = f.read().strip()
             except Exception:
                 day_image = ''
+        images = []
+        images_path = os.path.join(OUT_DIR, f'digest-{today.isoformat()}.images.json')
+        if os.path.exists(images_path):
+            try:
+                with open(images_path, encoding='utf-8') as f:
+                    images = json.load(f)
+            except Exception:
+                images = []
+        images = [img for img in images if img != day_image]
         meta = []
         if os.path.exists(META_PATH):
             try:
@@ -248,13 +257,15 @@ def main():
             except Exception:
                 meta = []
         meta = [m for m in meta if m.get('date') != today.isoformat()]
-        meta.append({
+        entry = {
             'date': today.isoformat(),
             'description': description,
             'image': day_image,
+            'images': images,
             'size': size,
             'duration': duration,
-        })
+        }
+        meta.append(entry)
         with open(META_PATH, 'w', encoding='utf-8') as f:
             json.dump(meta, f, ensure_ascii=False, indent=2)
         print(f'  Meta del podcast actualizado ({len(meta)} episodios)')

@@ -90,17 +90,19 @@ def process_colossal(post):
     full = re.sub(r'&#8211;', '–', full)
     full = re.sub(r'&#\d+;', '', full)
     full = re.sub(r'\s+', ' ', full).strip()
-    image = ''
-    im = re.search(r'<img[^>]+src="([^"]+)"', html)
-    if im:
-        image = im.group(1)
+    images = []
+    for im in re.finditer(r'<img[^>]+src="([^"]+)"', html):
+        src = im.group(1).split('?')[0]
+        if src and src not in images:
+            images.append(src)
     return {
         'title': post['title']['rendered'],
         'link': post['link'],
         'photographer': photographer,
         'summary': summary,
         'full_text': full,
-        'image': image,
+        'image': images[0] if images else '',
+        'images': images,
         'source': 'Colossal'
     }
 
@@ -165,6 +167,7 @@ def process_lomo(article):
         'summary': summary,
         'full_text': full,
         'image': article['thumbnail'],
+        'images': images if images else [article['thumbnail']] if article.get('thumbnail') else [],
         'source': 'Lomography'
     }
 
@@ -174,6 +177,7 @@ def process_rss_item(a, label):
     summary = clean_text(a.get('excerpt') or content)
     if len(summary) > 400:
         summary = summary[:397] + '…'
+    thumb = a.get('thumbnail') or ''
     return {
         'title': a['title'],
         'link': a['link'],
@@ -181,7 +185,8 @@ def process_rss_item(a, label):
         'photographers': None,
         'summary': summary,
         'full_text': full_text,
-        'image': a.get('thumbnail') or '',
+        'image': thumb,
+        'images': [thumb] if thumb else [],
         'source': label
     }
 
@@ -341,6 +346,25 @@ def render_podcast(items_by_source):
         lines.append('No hubo artículos hoy.')
     return '\n'.join(lines)
 
+def collect_all_images(items_by_source):
+    all_images = []
+    for key, label in SOURCES:
+        items = items_by_source.get(key) or []
+        for item in items:
+            imgs = item.get('images') or []
+            if item.get('image') and item['image'] not in imgs:
+                imgs.append(item['image'])
+            if imgs:
+                all_images.extend(imgs)
+    seen = set()
+    unique = []
+    for url in all_images:
+        clean = url.split('?')[0]
+        if clean not in seen:
+            seen.add(clean)
+            unique.append(clean)
+    return unique
+
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     ts = datetime.now().isoformat()
@@ -388,6 +412,12 @@ def main():
         with open(os.path.join(OUT_DIR, f'{stem}.image'), 'w') as f:
             f.write(day_image)
         print(f'  Imagen del día: {day_image[:90]}')
+
+    all_images = collect_all_images(items_by_source)
+    if all_images:
+        with open(os.path.join(OUT_DIR, f'{stem}.images.json'), 'w') as f:
+            json.dump(all_images, f, ensure_ascii=False, indent=2)
+        print(f'  Imágenes del artículo ({len(all_images)})')
     print(f'  Guardado: {stem}.html, {stem}.podcast.md')
 
 if __name__ == '__main__':
