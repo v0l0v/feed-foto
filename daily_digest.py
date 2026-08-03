@@ -253,7 +253,7 @@ hr{border:none;border-top:1px solid #eee;margin:2rem 0}
         parts.append('<p style="color:#888">No hubo artículos hoy.</p>')
 
     parts.append(f'''</div>
-<div class="footer">Generado el {datetime.now().strftime("%Y-%m-%d %H:%M")} · <a href="../index.html">feed·foto</a></div>
+<div class="footer">Generado el {datetime.now().strftime("%Y-%m-%d %H:%M")} · <a href="../index.html">Punto de vista</a></div>
 </body></html>''')
 
     return '\n'.join(parts)

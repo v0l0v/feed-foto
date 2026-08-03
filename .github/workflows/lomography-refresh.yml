@@ -34,7 +34,7 @@ jobs:
 
       - name: Configurar git
         run: |
-          git config user.name "feed-foto bot"
+          git config user.name "pdv bot"
           git config user.email "actions@github.com"
 
       - name: Refrescar Lomography (gratis vía Jina, 0 créditos)

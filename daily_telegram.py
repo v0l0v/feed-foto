@@ -188,7 +188,7 @@ def main():
 
     print(f'  Resumen generado ({len(summary)} chars)')
 
-    header = f'📸 <b>Feed·Foto</b> · {today.strftime("%d %b %Y")}\n\n'
+    header = f'📸 <b>Punto de vista</b> · {today.strftime("%d %b %Y")}\n\n'
 
     locutable = summary
     parts = summary.split(LOCUTABLE_MARKER, 1)

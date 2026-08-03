@@ -4,6 +4,8 @@
   --bg: #0a0a0a;
   --surface: #161616;
   --text: #f0ece4;
+  --accent: #ff0100;
+  --accent-2: #ff0100;
   --gap: 3px;
 }
 
@@ -39,9 +41,22 @@ header {
 }
 
 .logo {
-  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.logo-img {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.logo-text {
+  font-size: 1.4rem;
   opacity: 0.5;
 }
 
@@ -103,7 +118,7 @@ header {
 }
 .source-row:hover { background: rgba(255,255,255,0.05); }
 .source-row input {
-  accent-color: #e83030;
+  accent-color: #ff0100;
   cursor: pointer;
 }
 .source-row .src-count {
@@ -190,7 +205,7 @@ header {
 .card:hover .card-overlay { opacity: 1; }
 
 .card-overlay.color {
-  background: linear-gradient(180deg, rgba(10,10,10,0.1) 0%, rgba(200,120,60,0.25) 60%, rgba(180,80,30,0.5) 100%);
+  background: linear-gradient(180deg, rgba(10,10,10,0.1) 0%, rgba(255,1,0,0.22) 60%, rgba(200,0,0,0.45) 100%);
 }
 
 .card-skeleton {
@@ -342,7 +357,7 @@ header {
 }
 
 .modal-tool-btn:hover {
-  background: #e83030;
+  background: #ff0100;
   color: #fff;
 }
 
@@ -392,7 +407,7 @@ header {
 }
 
 .modal-content blockquote, .modal-article-content blockquote {
-  border-left: 2px solid rgba(200,120,60,0.3);
+  border-left: 2px solid rgba(255,1,0,0.35);
   padding-left: 1.2rem;
   margin: 1.2rem 0;
   opacity: 0.7;
@@ -439,12 +454,12 @@ header {
   font-size: 0.65rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(200,140,80,0.8);
+  color: rgba(255,1,0,0.8);
   text-decoration: none;
   transition: color 0.2s;
 }
 
-.modal-original:hover { color: rgba(200,140,80,1); }
+.modal-original:hover { color: rgba(255,1,0,1); }
 
 /* GALLERY */
 .modal-gallery {
@@ -558,12 +573,12 @@ footer {
   color: rgba(240,236,228,0.2);
 }
 .photographer-link {
-  color: rgba(200,140,80,0.8);
+  color: rgba(255,1,0,0.8);
   text-decoration: none;
   transition: color 0.2s;
 }
 .photographer-link:hover {
-  color: rgba(200,140,80,1);
+  color: rgba(255,1,0,1);
 }
 .modal-links {
   display: flex;

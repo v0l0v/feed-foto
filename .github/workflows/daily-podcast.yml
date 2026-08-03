@@ -28,7 +28,7 @@ jobs:
 
       - name: Configurar git
         run: |
-          git config user.name "feed-foto bot"
+          git config user.name "pdv bot"
           git config user.email "actions@github.com"
 
       - name: Enviar resumen y podcast a Telegram
@@ -43,7 +43,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release view episodios >/dev/null 2>&1 || \
-            gh release create episodios --title "Feed·Foto · podcast" --notes "Episodios diarios del podcast de feed·foto"
+            gh release create episodios --title "Punto de vista · podcast" --notes "Episodios diarios del podcast de Punto de vista"
           MP3="podcast/podcast-$(date +%F).mp3"
           if [ -f "$MP3" ]; then
             gh release upload episodios "$MP3" --clobber

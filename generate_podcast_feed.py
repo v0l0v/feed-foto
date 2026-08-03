@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 from email.utils import format_datetime
 
 DIR = os.path.dirname(os.path.abspath(__file__))
-SITE = 'https://v0l0v.github.io/feed-foto'
-RELEASE = 'https://github.com/v0l0v/feed-foto/releases/download/episodios'
+SITE = 'https://v0l0v.github.io/puntodevista'
+RELEASE = 'https://github.com/v0l0v/puntodevista/releases/download/episodios'
 COVER = f'{SITE}/podcast-cover.png'
 META_PATH = os.path.join(DIR, 'podcast_meta.json')
 OUT_PATH = os.path.join(DIR, 'podcast.xml')
@@ -73,7 +73,7 @@ def item_lines(entry, num):
         lines.append(f'    <itunes:duration>{dur}</itunes:duration>')
     lines.extend([
         f'    <itunes:title>{esc(title)}</itunes:title>',
-        '    <itunes:author>Feed·Foto</itunes:author>',
+        '    <itunes:author>Punto de vista</itunes:author>',
         f'    <itunes:summary>{cdata(desc)}</itunes:summary>',
         '    <itunes:explicit>false</itunes:explicit>',
         '  </item>',
@@ -89,15 +89,15 @@ def main():
         '<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" '
         'xmlns:atom="http://www.w3.org/2005/Atom">',
         '<channel>',
-        '<title>Feed·Foto — podcast diario</title>',
+        '<title>Punto de vista — podcast diario</title>',
         f'<link>{SITE}/</link>',
         f'<atom:link href="{SITE}/podcast.xml" rel="self" type="application/rss+xml"/>',
         f'<description>{CHANNEL_DESC}</description>',
         '<language>es</language>',
         f'<lastBuildDate>{now}</lastBuildDate>',
-        f'<image><url>{COVER}</url><title>Feed·Foto — podcast diario</title><link>{SITE}/</link></image>',
+        f'<image><url>{COVER}</url><title>Punto de vista — podcast diario</title><link>{SITE}/</link></image>',
         f'<itunes:image href="{COVER}"/>',
-        '<itunes:author>Feed·Foto</itunes:author>',
+        '<itunes:author>Punto de vista</itunes:author>',
         '<itunes:subtitle>Resumen diario de inspiración fotográfica</itunes:subtitle>',
         f'<itunes:summary>{CHANNEL_DESC}</itunes:summary>',
         '<itunes:explicit>false</itunes:explicit>',
