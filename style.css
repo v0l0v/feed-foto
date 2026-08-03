@@ -653,19 +653,19 @@ footer {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 0.45rem;
+  font-size: 0.5rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #ff0100;
 }
 .podcast-dot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   background: #ff0100;
 }
 
 .podcast-title {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-weight: 400;
   line-height: 1.2;
   margin: 0;
