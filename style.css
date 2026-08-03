@@ -688,6 +688,18 @@ footer {
   border-radius: 0;
 }
 
+.podcast-card audio::-webkit-media-controls-panel,
+.podcast-card audio::-webkit-media-controls-play-button,
+.podcast-card audio::-webkit-media-controls-mute-button,
+.podcast-card audio::-webkit-media-controls-current-time-display,
+.podcast-card audio::-webkit-media-controls-time-remaining-display,
+.podcast-card audio::-webkit-media-controls-timeline,
+.podcast-card audio::-webkit-media-controls-timeline-container,
+.podcast-card audio::-webkit-media-controls-volume-slider,
+.podcast-card audio::-webkit-media-controls-volume-slider-container {
+  border-radius: 0 !important;
+}
+
 .podcast-meta {
   display: flex;
   gap: 1rem;
