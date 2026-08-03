@@ -282,8 +282,13 @@ function isSourceVisible(src) {
   return __sources.size === 0 || __sources.has(src);
 }
 
+function isMobile() {
+  return window.matchMedia('(max-width: 720px)').matches;
+}
+
 function applyFilter() {
-  const entries = window.__allEntries.filter(e => isSourceVisible(e._source));
+  const entries = isMobile() ? window.__allEntries
+    : window.__allEntries.filter(e => isSourceVisible(e._source));
   render(entries);
   document.getElementById('chk-all').checked = __sources.size === 0;
   ALL_SOURCES.forEach(src => {
