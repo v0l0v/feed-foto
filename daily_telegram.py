@@ -141,6 +141,7 @@ def clean_text(t):
     return t
 
 
+TITLE_MARKER = '---TITLE---'
 LOCUTABLE_MARKER = '---LOCUTABLE---'
 
 def build_summary_prompt(podcast_content):
@@ -149,14 +150,18 @@ def build_summary_prompt(podcast_content):
 
 {podcast_content}
 
-Escribe tu respuesta en DOS secciones separadas por esta línea exacta: {LOCUTABLE_MARKER}
+Escribe tu respuesta en TRES secciones separadas por estas líneas exactas:
+{TITLE_MARKER}
+{LOCUTABLE_MARKER}
 
-PRIMERA SECCIÓN - Solo los resúmenes para redes sociales, con este formato exacto:
+PRIMERA SECCIÓN - Un título creativo en español para el episodio del podcast, extraído del contexto de los artículos. Solo el título, sin explicaciones ni notas adicionales.
+
+SEGUNDA SECCIÓN - Solo los resúmenes para redes sociales, con este formato exacto:
 - Sin introducciones, sin títulos de programa, sin despedidas, sin notas.
 - Por cada artículo: pon el título en negrita **Título** y debajo 2-3 frases de resumen atractivas en español.
 - Los resúmenes deben sonar amenos e inspiradores, como para leerlos en una red social.
 
-SEGUNDA SECCIÓN (solo el texto locutable para el audio del podcast):
+TERCERA SECCIÓN (solo el texto locutable para el audio del podcast):
 - El guion de radio en español, tono natural y cercano.
 - Debe sonar bien al leerlo en voz alta.
 - Empieza directo con el saludo: "¡Hola, muy buenas!".
@@ -190,13 +195,25 @@ def main():
 
     header = f'📸 <b>Punto de vista</b> · {today.strftime("%d %b %Y")}\n\n'
 
+    podcast_title = ''
     locutable = summary
-    parts = summary.split(LOCUTABLE_MARKER, 1)
-    if len(parts) == 2:
-        locutable = parts[1].strip()
-        full_msg = header + parts[0].strip()
+    title_parts = summary.split(TITLE_MARKER, 1)
+    if len(title_parts) == 2:
+        podcast_title = title_parts[0].strip()
+        remaining = title_parts[1]
+        loc_parts = remaining.split(LOCUTABLE_MARKER, 1)
+        if len(loc_parts) == 2:
+            locutable = loc_parts[1].strip()
+            full_msg = header + loc_parts[0].strip()
+        else:
+            full_msg = header + remaining
     else:
-        full_msg = header + summary
+        loc_parts = summary.split(LOCUTABLE_MARKER, 1)
+        if len(loc_parts) == 2:
+            locutable = loc_parts[1].strip()
+            full_msg = header + loc_parts[0].strip()
+        else:
+            full_msg = header + summary
 
     if len(full_msg) > 4000:
         full_msg = full_msg[:3997] + '...'
@@ -262,6 +279,7 @@ def main():
             'description': description,
             'image': day_image,
             'images': images,
+            'podcast_title': podcast_title,
             'size': size,
             'duration': duration,
         }

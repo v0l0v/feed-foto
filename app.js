@@ -394,17 +394,19 @@ function fmtDur(sec) {
 function podcastCardHTML() {
   if (!__podcast) return '';
   const e = __podcast;
-  const title = `Episodio ${e.num} · ${fmtDate(new Date(e.date + 'T00:00:00'))}`;
+  const title = `Episodio ${e.num} · ${fmtDateLong(new Date(e.date + 'T00:00:00'))}`;
   const url = `${PODCAST_RELEASE}/podcast-${e.date}.mp3`;
   const images = e.images || [];
   const img = images.length ? images[Math.floor(Math.random() * images.length)] : (e.image || PODCAST_COVER);
   const dur = fmtDur(e.duration);
+  const podcastTitle = e.podcast_title || '';
   return `<div class="card podcast-card" data-podcast="1">
     <div class="podcast-inner">
       <div class="podcast-art"><img src="${esc(img)}" alt="" loading="lazy"></div>
       <div class="podcast-body">
         <div class="podcast-badge"><span class="podcast-dot"></span>Podcast · Punto de vista</div>
         <h3 class="podcast-title">${esc(title)}</h3>
+        ${podcastTitle ? '<h4 class="podcast-context">' + esc(podcastTitle) + '</h4>' : ''}
         <div class="podcast-player" data-url="${esc(url)}">
           <button class="podcast-play" aria-label="Reproducir">▶</button>
           <div class="podcast-progress"><div class="podcast-progress-fill"></div></div>
@@ -412,10 +414,8 @@ function podcastCardHTML() {
           <input type="range" class="podcast-volume" min="0" max="1" step="0.05" value="1" aria-label="Volumen">
         </div>
         <div class="podcast-meta">
-          ${dur ? `<span>${dur}</span>` : ''}
-          <span>${esc(fmtDate(new Date(e.date + 'T00:00:00')))}</span>
-          <span class="podcast-ai">Generado por IA</span>
-          <a href="podcast.xml" target="_blank" rel="noopener">feed RSS</a>
+          <span class="podcast-ai">Generado por v0l0v IA</span>
+          <a href="podcast.xml" target="_blank" rel="noopener">Feed RSS</a>
         </div>
       </div>
     </div>
@@ -462,6 +462,10 @@ function render(entries) {
 
 function fmtDate(d) {
   return d.toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function fmtDateLong(d) {
+  return d.toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 function imgLoaded(img) {
