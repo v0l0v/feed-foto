@@ -167,7 +167,14 @@ let __sources = new Set();
 function loadSources() {
   try {
     const saved = JSON.parse(localStorage.getItem(SOURCES_KEY));
-    if (Array.isArray(saved)) __sources = new Set(saved);
+    if (Array.isArray(saved)) {
+      __sources = new Set(saved);
+      // Never persist podcast-only filter across sessions
+      if (__sources.size === 1 && __sources.has('podcast')) {
+        __sources.clear();
+        saveSources();
+      }
+    }
   } catch {}
 }
 
@@ -484,7 +491,9 @@ function extractImg(post) {
 }
 
 function isSourceVisible(src) {
-  if (__sources.has('podcast')) return src === 'podcast';
+  // Podcasts are opt-in: only show when explicitly filtering by podcast
+  if (src === 'podcast') return __sources.has('podcast');
+  if (__sources.has('podcast')) return false; // hide news when podcast filter active
   return __sources.size === 0 || __sources.has(src);
 }
 
@@ -540,7 +549,6 @@ function render(entries) {
     const src = isPodcast ? e.image : extractImg(e);
     const sourceLabel = isPodcast ? 'Podcast · Punto de vista' : getSourceLabel(e._source);
     const linkHref = isPodcast ? '#' : e.link;
-    const clickHandler = isPodcast ? `playPodcastInBar(${JSON.stringify(e).replace(/"/g, '&quot;')})` : 'event.stopPropagation()';
     return `<div class="card" data-color="?" data-id="${e._id}" data-source="${e._source}" onclick="openModal(this)">
       <div class="card-inner">
         <div class="card-skeleton"></div>
@@ -549,7 +557,7 @@ function render(entries) {
       </div>
       <div class="card-info">
         <div class="card-source">${sourceLabel}</div>
-        <div class="card-title"><a href="${linkHref}" target="_blank" rel="noopener" onclick="${clickHandler}">${e.title}</a></div>
+        <div class="card-title"><a href="${linkHref}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${e.title}</a></div>
         <div class="card-meta">
           <span class="card-date">${e._parsedDate ? fmtDate(e._parsedDate) : ''}</span>
         </div>
@@ -979,10 +987,10 @@ async function openModal(card) {
   document.getElementById('modal').classList.remove('hide');
 
   if (source === 'podcast') {
+    // Don't open modal for podcast cards — open the player bar instead
+    document.getElementById('modal').classList.add('hide');
     const entry = window.__allEntries?.find(e => e._id === id);
-    if (entry) {
-      playPodcastInBar(entry);
-    }
+    if (entry) playPodcastInBar(entry);
     return;
   }
 
