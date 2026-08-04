@@ -195,11 +195,11 @@ def fetch_huck():
 
 
 def fetch_lensculture():
-    return fetch_rss(LENSCULTURE_URL, 'lensculture')
+    return fetch_rss(LENSCULTURE_URL, 'lensculture', fetch_page_fallback=False)
 
 
 def fetch_odlp():
-    return fetch_rss(ODLP_URL, 'odlp')
+    return fetch_rss(ODLP_URL, 'odlp', fetch_page_fallback=False)
 
 
 def load_previous_items(filename):
