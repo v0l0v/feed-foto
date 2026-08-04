@@ -23,6 +23,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Instalar dependencias
+        run: pip install requests
+
       - name: Configurar git
         run: |
           git config user.name "pdv bot"
@@ -30,3 +33,16 @@ jobs:
 
       - name: Actualizar listas de feeds (sin Firecrawl, 0 créditos)
         run: python3 update_lists.py
+
+      - name: Enviar noticias nuevas a Telegram
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: python3 telegram_news.py
+
+      - name: Commit y push del estado de Telegram
+        run: |
+          git add telegram_sent.json
+          git commit -m "chore: telegram news state $(date +%Y-%m-%d)" || echo "nada que commitear"
+          git pull --rebase --autostash || true
+          git push
