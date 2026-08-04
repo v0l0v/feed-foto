@@ -79,25 +79,38 @@ header {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
 }
-.sources-btn:hover {
-  background: rgba(255,255,255,0.14);
-  border-color: rgba(255,1,0,0.5);
+.sources-btn:hover,
+.sources-btn.active {
+  background: rgba(255,255,255,0.13);
+  border-color: rgba(255,1,0,0.6);
   color: #ff0100;
+  box-shadow: 0 0 12px rgba(255,1,0,0.15);
 }
 .podcast-btn {
   display: inline-block;
   text-decoration: none;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 .podcast-btn:hover {
-  border-color: rgba(255,1,0,0.5);
+  border-color: rgba(255,1,0,0.6);
   color: #ff0100;
+  box-shadow: 0 0 12px rgba(255,1,0,0.15);
 }
 .podcast-btn.active {
   border-color: #ff0100;
   color: #ff0100;
   background: rgba(255, 1, 0, 0.08);
+  box-shadow: 0 0 14px rgba(255,1,0,0.2);
 }
 .sources-btn #sources-btn-count {
   opacity: 0.6;
@@ -105,7 +118,7 @@ header {
 
 #sources-panel {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 6px);
   right: 1rem;
   z-index: 60;
   min-width: 250px;
@@ -116,8 +129,24 @@ header {
   display: flex;
   flex-direction: column;
   box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  /* Animación */
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transform-origin: top right;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
-#sources-panel.hide { display: none; }
+#sources-panel.hide {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.97);
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease,
+    visibility 0s 0.15s;
+}
 
 .source-row {
   display: flex;

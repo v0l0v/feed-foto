@@ -91,11 +91,13 @@ document.addEventListener('DOMContentLoaded', () => {
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     const open = panel.classList.toggle('hide') === false;
+    btn.classList.toggle('active', open);
     btn.setAttribute('aria-expanded', open);
   });
   document.addEventListener('click', (e) => {
-    if (!panel.classList.contains('hide') && !panel.contains(e.target)) {
+    if (!panel.classList.contains('hide') && !panel.contains(e.target) && e.target !== btn) {
       panel.classList.add('hide');
+      btn.classList.remove('active');
       btn.setAttribute('aria-expanded', 'false');
     }
   });
