@@ -7,7 +7,8 @@ from datetime import date
 from update_static_data import (fetch_colossal, fetch_lomography, fetch_booooooom,
                                 fetch_tpj, fetch_swan, fetch_huck, load_previous_items,
                                 update_lomography_articles, update_booooooom_articles, update_swan_articles,
-                                fetch_lensculture, update_lensculture_articles)
+                                fetch_lensculture, update_lensculture_articles,
+                                fetch_odlp, update_odlp_articles)
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -75,7 +76,13 @@ def main():
         lensculture = load_previous_items('lensculture.json')
     print(f'     {len(lensculture)} artículos')
 
-    all_entries = sorted(colossal + lomo + boom + tpj + swan + huck + lensculture,
+    print('  6c. L\'Œil de la Photographie...')
+    odlp = fetch_odlp()
+    if not odlp:
+        odlp = load_previous_items('odlp.json')
+    print(f'     {len(odlp)} artículos')
+
+    all_entries = sorted(colossal + lomo + boom + tpj + swan + huck + lensculture + odlp,
                          key=lambda x: x.get('_parsedDate') or x.get('date') or '',
                          reverse=True)
 
@@ -85,9 +92,10 @@ def main():
     save_payload('swan.json', swan, all_entries)
     save_payload('huck.json', huck, all_entries)
     save_payload('lensculture.json', lensculture, all_entries)
+    save_payload('odlp.json', odlp, all_entries)
     save_payload('feeds.json', all_entries, all_entries)
 
-    print('  6c. Actualizando cachés de artículos...')
+    print('  6d. Actualizando cachés de artículos...')
     if lomo:
         update_lomography_articles(lomo)
     if boom:
@@ -96,12 +104,14 @@ def main():
         update_swan_articles(swan)
     if lensculture:
         update_lensculture_articles(lensculture[:10])
+    if odlp:
+        update_odlp_articles(odlp[:10])
 
     print('  7. Subiendo a GitHub...')
     try:
         subprocess.run(
-            ['git', 'add', 'lomography.json', 'booooooom.json', 'tpj.json', 'swan.json', 'huck.json', 'lensculture.json', 'feeds.json',
-             'lomography_articles.json', 'booooooom_articles.json', 'swan_articles.json', 'lensculture_articles.json'],
+            ['git', 'add', 'lomography.json', 'booooooom.json', 'tpj.json', 'swan.json', 'huck.json', 'lensculture.json', 'odlp.json', 'feeds.json',
+             'lomography_articles.json', 'booooooom_articles.json', 'swan_articles.json', 'lensculture_articles.json', 'odlp_articles.json'],
             capture_output=True, text=True, cwd=DIR
         )
         res = subprocess.run(

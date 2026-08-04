@@ -233,6 +233,53 @@ def scrape_lensculture():
         print('Error scrape_lensculture:', e)
         return []
 
+ODLP_CACHE = {'data': None, 'time': 0, 'ttl': 120}
+
+def scrape_odlp():
+    now = time.time()
+    if ODLP_CACHE['data'] and now - ODLP_CACHE['time'] < ODLP_CACHE['ttl']:
+        return ODLP_CACHE['data']
+    url = 'https://loeildelaphotographie.com/en/feed/'
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            xml_data = resp.read()
+        import xml.etree.ElementTree as ET
+        from html import unescape
+        from datetime import datetime
+        root = ET.fromstring(xml_data.lstrip())
+        articles = []
+        for item in root.iter('item'):
+            title = ''
+            link = ''
+            pub_date = ''
+            title_el = item.find('title')
+            if title_el is not None and title_el.text:
+                title = unescape(title_el.text.strip())
+            link_el = item.find('link')
+            if link_el is not None and link_el.text:
+                link = link_el.text.strip()
+            pub_el = item.find('pubDate')
+            if pub_el is not None and pub_el.text:
+                try:
+                    dt = datetime.strptime(pub_el.text.strip()[:25].strip(), '%a, %d %b %Y %H:%M:%S')
+                    pub_date = dt.strftime('%Y-%m-%d')
+                except Exception:
+                    pub_date = ''
+            articles.append({
+                '_source': 'odlp',
+                'title': title,
+                'link': link,
+                'date': pub_date,
+                'excerpt': ''
+            })
+        ODLP_CACHE['data'] = articles
+        ODLP_CACHE['time'] = now
+        return articles
+    except Exception as e:
+        print('Error scrape_odlp:', e)
+        return []
+
 def inline_to_html(text):
     urls = []
 
@@ -496,6 +543,47 @@ def scrape_lensculture_article(url):
     return data
 
 
+ODLP_ARTICLE_CACHE = {}
+
+def scrape_odlp_article(url):
+    now = time.time()
+    if url in ODLP_ARTICLE_CACHE and now - ODLP_ARTICLE_CACHE[url]['time'] < 300:
+        return ODLP_ARTICLE_CACHE[url]['data']
+    md = firecrawl_scrape(url, timeout=60)
+    if not md:
+        return None
+    
+    idx = md.find('Printer Friendly, PDF & Email')
+    if idx != -1:
+        end_idx = md.find(')', idx)
+        content_md = md[end_idx+1:] if end_idx != -1 else md[idx+35:]
+    else:
+        m = re.search(r'loeildelaphotographie\.com/en/author/[^)]+\)', md)
+        content_md = md[m.end():] if m else md
+    
+    cut = len(content_md)
+    pats = [
+        r'\*\s+\[Share\]\(https://www\.facebook\.com/sharer',
+        r'POST ID:',
+        r'Subscribe now for full access to The Eye of Photography!',
+        r'## Today\'s headlines',
+        r'## Today’s headlines'
+    ]
+    for pat in pats:
+        mm = re.search(pat, content_md, re.MULTILINE)
+        if mm and mm.start() < cut:
+            cut = mm.start()
+    content_md = content_md[:cut].strip()
+    
+    images = [{'url': im.group(2), 'alt': im.group(1)} for im in re.finditer(r'!\[([^\]]*)\]\(([^)]+)\)', md)]
+    images = [img for img in images if 'loeildelaphotographie.com/wp-content/uploads/' in img['url']]
+    
+    content = md_to_html(content_md)
+    data = {'status': 'ok', 'content': content, 'images': images, 'credits': []}
+    ODLP_ARTICLE_CACHE[url] = {'data': data, 'time': now}
+    return data
+
+
 SWAN_ARTICLE_CACHE = {}
 SWAN_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -585,6 +673,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             try:
                 articles = scrape_lensculture()
+                data = json.dumps({'status': 'ok', 'items': articles, 'count': len(articles)})
+            except Exception as e:
+                data = json.dumps({'status': 'error', 'message': str(e)})
+            self.wfile.write(data.encode())
+        elif parsed.path == '/api/odlp':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            try:
+                articles = scrape_odlp()
                 data = json.dumps({'status': 'ok', 'items': articles, 'count': len(articles)})
             except Exception as e:
                 data = json.dumps({'status': 'error', 'message': str(e)})
@@ -693,6 +792,21 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps({'status': 'error', 'message': 'missing url'}).encode())
                 return
             data = scrape_lensculture_article(url)
+            if data is None:
+                self.wfile.write(json.dumps({'status': 'error', 'message': 'error scraping article'}).encode())
+            else:
+                self.wfile.write(json.dumps(data).encode())
+        elif parsed.path == '/api/odlp/article':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            qs = urllib.parse.parse_qs(parsed.query)
+            url = qs.get('url', [None])[0]
+            if not url:
+                self.wfile.write(json.dumps({'status': 'error', 'message': 'missing url'}).encode())
+                return
+            data = scrape_odlp_article(url)
             if data is None:
                 self.wfile.write(json.dumps({'status': 'error', 'message': 'error scraping article'}).encode())
             else:

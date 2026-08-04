@@ -12,7 +12,7 @@ from html import unescape
 
 from server import (firecrawl_scrape, parse_magazine_list, scrape_lomography_article,
                     scrape_booooooom_article, scrape_swan_article, scrape_lensculture_article,
-                    scrape_lensculture)
+                    scrape_lensculture, scrape_odlp_article, scrape_odlp)
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -33,6 +33,7 @@ TPJ_URLS = [
 SWAN_URL = 'https://www.swanngalleries.com/news/category/photographs-and-photobooks/feed'
 HUCK_URL = 'https://www.huckmag.com/topic/photography/feed'
 LENSCULTURE_URL = 'https://www.lensculture.com/feeds/feed.rss'
+ODLP_URL = 'https://loeildelaphotographie.com/en/feed/'
 
 
 def fetch_colossal():
@@ -197,6 +198,10 @@ def fetch_lensculture():
     return fetch_rss(LENSCULTURE_URL, 'lensculture')
 
 
+def fetch_odlp():
+    return fetch_rss(ODLP_URL, 'odlp')
+
+
 def load_previous_items(filename):
     try:
         with open(os.path.join(DIR, filename)) as f:
@@ -270,6 +275,10 @@ def update_lensculture_articles(items):
     return update_article_cache('lensculture_articles.json', items, scrape_lensculture_article)
 
 
+def update_odlp_articles(items):
+    return update_article_cache('odlp_articles.json', items, scrape_odlp_article)
+
+
 def main():
     parser = argparse.ArgumentParser(description='Genera datos estáticos (feeds + caches de artículos).')
     parser.add_argument('--keep-lomo', action='store_true',
@@ -323,6 +332,12 @@ def main():
         lensculture = load_previous_items('lensculture.json')
     print(f'     {len(lensculture)} artículos')
 
+    print('  6c. L\'Œil de la Photographie...')
+    odlp = fetch_odlp()
+    if not odlp:
+        odlp = load_previous_items('odlp.json')
+    print(f'     {len(odlp)} artículos')
+
     print('  7. Lomography articles (cache GitHub Pages)...')
     purge_bad_articles('lomography_articles.json')
     new_articles = update_lomography_articles(lomo)
@@ -349,7 +364,12 @@ def main():
     new_lens_articles = update_lensculture_articles(lensculture[:10])
     print(f'     {new_lens_articles} nuevos | {len(load_article_cache("lensculture_articles.json"))} en cache')
 
-    all_entries = sorted(colossal + lomo + boom + tpj + swan + huck + lensculture,
+    print('  9c. L\'Œil de la Photographie articles (cache GitHub Pages)...')
+    purge_bad_articles('odlp_articles.json')
+    new_odlp_articles = update_odlp_articles(odlp[:10])
+    print(f'     {new_odlp_articles} nuevos | {len(load_article_cache("odlp_articles.json"))} en cache')
+
+    all_entries = sorted(colossal + lomo + boom + tpj + swan + huck + lensculture + odlp,
                          key=lambda x: x.get('_parsedDate') or x.get('date') or '',
                          reverse=True)
 
@@ -371,16 +391,19 @@ def main():
     with open(os.path.join(DIR, 'lensculture.json'), 'w') as f:
         json.dump({'items': lensculture, 'count': len(lensculture), 'updated': ts}, f)
 
+    with open(os.path.join(DIR, 'odlp.json'), 'w') as f:
+        json.dump({'items': odlp, 'count': len(odlp), 'updated': ts}, f)
+
     with open(os.path.join(DIR, 'feeds.json'), 'w') as f:
         json.dump({'items': all_entries, 'count': len(all_entries), 'updated': ts}, f)
 
-    print(f'  Guardado: lomography.json, booooooom.json, tpj.json, swan.json, huck.json, lensculture.json, feeds.json ({len(all_entries)} total)')
+    print(f'  Guardado: lomography.json, booooooom.json, tpj.json, swan.json, huck.json, lensculture.json, odlp.json, feeds.json ({len(all_entries)} total)')
 
     print('  10. Subiendo a GitHub...')
     try:
         result = subprocess.run(
-            ['git', 'add', 'lomography.json', 'booooooom.json', 'tpj.json', 'swan.json', 'huck.json', 'lensculture.json', 'feeds.json',
-             'lomography_articles.json', 'booooooom_articles.json', 'swan_articles.json', 'lensculture_articles.json'],
+            ['git', 'add', 'lomography.json', 'booooooom.json', 'tpj.json', 'swan.json', 'huck.json', 'lensculture.json', 'odlp.json', 'feeds.json',
+             'lomography_articles.json', 'booooooom_articles.json', 'swan_articles.json', 'lensculture_articles.json', 'odlp_articles.json'],
             capture_output=True, text=True, cwd=DIR
         )
         result = subprocess.run(
