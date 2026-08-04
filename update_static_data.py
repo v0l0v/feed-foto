@@ -12,7 +12,8 @@ from html import unescape
 
 from server import (firecrawl_scrape, parse_magazine_list, scrape_lomography_article,
                     scrape_booooooom_article, scrape_swan_article, scrape_lensculture_article,
-                    scrape_lensculture, scrape_odlp_article, scrape_odlp)
+                    scrape_lensculture, scrape_odlp_article, scrape_odlp, scrape_magnum_article,
+                    scrape_magnum)
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -34,6 +35,7 @@ SWAN_URL = 'https://www.swanngalleries.com/news/category/photographs-and-photobo
 HUCK_URL = 'https://www.huckmag.com/topic/photography/feed'
 LENSCULTURE_URL = 'https://www.lensculture.com/feeds/feed.rss'
 ODLP_URL = 'https://loeildelaphotographie.com/en/feed/'
+MAGNUM_URL = 'https://www.magnumphotos.com/wp-json/wp/v2/posts?per_page=30'
 
 
 def fetch_colossal():
@@ -202,6 +204,10 @@ def fetch_odlp():
     return fetch_rss(ODLP_URL, 'odlp', fetch_page_fallback=False)
 
 
+def fetch_magnum():
+    return scrape_magnum()
+
+
 def load_previous_items(filename):
     try:
         with open(os.path.join(DIR, filename)) as f:
@@ -279,6 +285,10 @@ def update_odlp_articles(items):
     return update_article_cache('odlp_articles.json', items, scrape_odlp_article)
 
 
+def update_magnum_articles(items):
+    return update_article_cache('magnum_articles.json', items, scrape_magnum_article)
+
+
 def main():
     parser = argparse.ArgumentParser(description='Genera datos estáticos (feeds + caches de artículos).')
     parser.add_argument('--keep-lomo', action='store_true',
@@ -338,6 +348,12 @@ def main():
         odlp = load_previous_items('odlp.json')
     print(f'     {len(odlp)} artículos')
 
+    print('  6d. Magnum Photos...')
+    magnum = fetch_magnum()
+    if not magnum:
+        magnum = load_previous_items('magnum.json')
+    print(f'     {len(magnum)} artículos')
+
     print('  7. Lomography articles (cache GitHub Pages)...')
     purge_bad_articles('lomography_articles.json')
     new_articles = update_lomography_articles(lomo)
@@ -381,7 +397,18 @@ def main():
         if isinstance(data, dict) and data.get('thumbnail'):
             item['thumbnail'] = data['thumbnail']
 
-    all_entries = sorted(colossal + lomo + boom + tpj + swan + huck + lensculture + odlp,
+    print('  9d. Magnum Photos articles (cache GitHub Pages)...')
+    purge_bad_articles('magnum_articles.json')
+    new_magnum_articles = update_magnum_articles(magnum[:10])
+    magnum_cache = load_article_cache('magnum_articles.json')
+    print(f'     {new_magnum_articles} nuevos | {len(magnum_cache)} en cache')
+
+    for item in magnum:
+        data = magnum_cache.get(item.get('link'))
+        if isinstance(data, dict) and data.get('thumbnail'):
+            item['thumbnail'] = data['thumbnail']
+
+    all_entries = sorted(colossal + lomo + boom + tpj + swan + huck + lensculture + odlp + magnum,
                          key=lambda x: x.get('_parsedDate') or x.get('date') or '',
                          reverse=True)
 
@@ -406,16 +433,19 @@ def main():
     with open(os.path.join(DIR, 'odlp.json'), 'w') as f:
         json.dump({'items': odlp, 'count': len(odlp), 'updated': ts}, f)
 
+    with open(os.path.join(DIR, 'magnum.json'), 'w') as f:
+        json.dump({'items': magnum, 'count': len(magnum), 'updated': ts}, f)
+
     with open(os.path.join(DIR, 'feeds.json'), 'w') as f:
         json.dump({'items': all_entries, 'count': len(all_entries), 'updated': ts}, f)
 
-    print(f'  Guardado: lomography.json, booooooom.json, tpj.json, swan.json, huck.json, lensculture.json, odlp.json, feeds.json ({len(all_entries)} total)')
+    print(f'  Guardado: lomography.json, booooooom.json, tpj.json, swan.json, huck.json, lensculture.json, odlp.json, magnum.json, feeds.json ({len(all_entries)} total)')
 
     print('  10. Subiendo a GitHub...')
     try:
         result = subprocess.run(
-            ['git', 'add', 'lomography.json', 'booooooom.json', 'tpj.json', 'swan.json', 'huck.json', 'lensculture.json', 'odlp.json', 'feeds.json',
-             'lomography_articles.json', 'booooooom_articles.json', 'swan_articles.json', 'lensculture_articles.json', 'odlp_articles.json'],
+            ['git', 'add', 'lomography.json', 'booooooom.json', 'tpj.json', 'swan.json', 'huck.json', 'lensculture.json', 'odlp.json', 'magnum.json', 'feeds.json',
+             'lomography_articles.json', 'booooooom_articles.json', 'swan_articles.json', 'lensculture_articles.json', 'odlp_articles.json', 'magnum_articles.json'],
             capture_output=True, text=True, cwd=DIR
         )
         result = subprocess.run(

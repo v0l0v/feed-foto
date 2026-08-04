@@ -280,6 +280,45 @@ def scrape_odlp():
         print('Error scrape_odlp:', e)
         return []
 
+MAGNUM_CACHE = {'data': None, 'time': 0, 'ttl': 120}
+
+def scrape_magnum():
+    now = time.time()
+    if MAGNUM_CACHE['data'] and now - MAGNUM_CACHE['time'] < MAGNUM_CACHE['ttl']:
+        return MAGNUM_CACHE['data']
+    url = 'https://www.magnumphotos.com/wp-json/wp/v2/posts?per_page=30'
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+        articles = []
+        for post in data:
+            from html import unescape
+            from datetime import datetime
+            title = unescape(post.get('title', {}).get('rendered', '').strip())
+            link = post.get('link', '').strip()
+            date_str = post.get('date', '')
+            pub_date = ''
+            if date_str:
+                try:
+                    dt = datetime.strptime(date_str[:10], '%Y-%m-%d')
+                    pub_date = dt.strftime('%Y-%m-%d')
+                except Exception:
+                    pub_date = date_str[:10]
+            articles.append({
+                '_source': 'magnum',
+                'title': title,
+                'link': link,
+                'date': pub_date,
+                'excerpt': ''
+            })
+        MAGNUM_CACHE['data'] = articles
+        MAGNUM_CACHE['time'] = now
+        return articles
+    except Exception as e:
+        print('Error scrape_magnum:', e)
+        return []
+
 def inline_to_html(text):
     urls = []
 
@@ -586,6 +625,61 @@ def scrape_odlp_article(url):
     return data
 
 
+MAGNUM_ARTICLE_CACHE = {}
+
+def scrape_magnum_article(url):
+    now = time.time()
+    if url in MAGNUM_ARTICLE_CACHE and now - MAGNUM_ARTICLE_CACHE[url]['time'] < 300:
+        return MAGNUM_ARTICLE_CACHE[url]['data']
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            html_data = resp.read().decode('utf-8', errors='ignore')
+    except Exception as e:
+        print('Error fetching magnum article:', e)
+        return None
+        
+    rte_blocks = re.findall(r'<div class="rte">(.*?)</div>', html_data, re.DOTALL)
+    content_parts = []
+    for block in rte_blocks:
+        text = block.strip()
+        text = re.sub(r'</?p>', '\n\n', text)
+        text = re.sub(r'</?strong>', '**', text)
+        text = re.sub(r'</?em>', '_', text)
+        text = re.sub(r'<a href="([^"]+)"[^>]*>(.*?)</a>', r'[\2](\1)', text)
+        text = re.sub(r'<[^>]+>', '', text)
+        text = html.unescape(text)
+        content_parts.append(text.strip())
+        
+    content_md = '\n\n'.join([p for p in content_parts if p])
+    content = md_to_html(content_md)
+    
+    images = []
+    blocks = html_data.split('class="story-big-image')
+    for b in blocks[1:]:
+        img_match = re.search(r'src="([^"]+)"', b)
+        if img_match:
+            img_url = img_match.group(1)
+            cap_match = re.search(r'class="b-caption__text"[^>]*>(.*?)</div>', b, re.DOTALL)
+            caption = ''
+            if cap_match:
+                caption = re.sub(r'<[^>]+>', '', cap_match.group(1))
+                caption = html.unescape(caption).strip()
+            images.append({'url': img_url, 'alt': caption})
+            
+    seen_urls = set()
+    unique_images = []
+    for img in images:
+        if img['url'] not in seen_urls:
+            seen_urls.add(img['url'])
+            unique_images.append(img)
+            
+    thumbnail = unique_images[0]['url'] if unique_images else ''
+    data = {'status': 'ok', 'content': content, 'images': unique_images, 'credits': [], 'thumbnail': thumbnail}
+    MAGNUM_ARTICLE_CACHE[url] = {'data': data, 'time': now}
+    return data
+
+
 SWAN_ARTICLE_CACHE = {}
 SWAN_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -686,6 +780,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             try:
                 articles = scrape_odlp()
+                data = json.dumps({'status': 'ok', 'items': articles, 'count': len(articles)})
+            except Exception as e:
+                data = json.dumps({'status': 'error', 'message': str(e)})
+            self.wfile.write(data.encode())
+        elif parsed.path == '/api/magnum':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            try:
+                articles = scrape_magnum()
                 data = json.dumps({'status': 'ok', 'items': articles, 'count': len(articles)})
             except Exception as e:
                 data = json.dumps({'status': 'error', 'message': str(e)})
@@ -809,6 +914,21 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps({'status': 'error', 'message': 'missing url'}).encode())
                 return
             data = scrape_odlp_article(url)
+            if data is None:
+                self.wfile.write(json.dumps({'status': 'error', 'message': 'error scraping article'}).encode())
+            else:
+                self.wfile.write(json.dumps(data).encode())
+        elif parsed.path == '/api/magnum/article':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            qs = urllib.parse.parse_qs(parsed.query)
+            url = qs.get('url', [None])[0]
+            if not url:
+                self.wfile.write(json.dumps({'status': 'error', 'message': 'missing url'}).encode())
+                return
+            data = scrape_magnum_article(url)
             if data is None:
                 self.wfile.write(json.dumps({'status': 'error', 'message': 'error scraping article'}).encode())
             else:

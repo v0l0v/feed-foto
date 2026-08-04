@@ -8,7 +8,7 @@ from update_static_data import (fetch_colossal, fetch_lomography, fetch_booooooo
                                 fetch_tpj, fetch_swan, fetch_huck, load_previous_items,
                                 update_lomography_articles, update_booooooom_articles, update_swan_articles,
                                 fetch_lensculture, update_lensculture_articles,
-                                fetch_odlp, update_odlp_articles)
+                                fetch_odlp, update_odlp_articles, fetch_magnum, update_magnum_articles)
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -82,7 +82,13 @@ def main():
         odlp = load_previous_items('odlp.json')
     print(f'     {len(odlp)} artículos')
 
-    print('  6d. Actualizando cachés de artículos...')
+    print('  6d. Magnum Photos...')
+    magnum = fetch_magnum()
+    if not magnum:
+        magnum = load_previous_items('magnum.json')
+    print(f'     {len(magnum)} artículos')
+
+    print('  6e. Actualizando cachés de artículos...')
     if lomo:
         update_lomography_articles(lomo)
     if boom:
@@ -115,7 +121,15 @@ def main():
             if isinstance(data, dict) and data.get('thumbnail'):
                 item['thumbnail'] = data['thumbnail']
 
-    all_entries = sorted(colossal + lomo + boom + tpj + swan + huck + lensculture + odlp,
+    if magnum:
+        update_magnum_articles(magnum[:10])
+        magnum_cache = load_article_cache('magnum_articles.json')
+        for item in magnum:
+            data = magnum_cache.get(item.get('link'))
+            if isinstance(data, dict) and data.get('thumbnail'):
+                item['thumbnail'] = data['thumbnail']
+
+    all_entries = sorted(colossal + lomo + boom + tpj + swan + huck + lensculture + odlp + magnum,
                          key=lambda x: x.get('_parsedDate') or x.get('date') or '',
                          reverse=True)
 
@@ -126,13 +140,14 @@ def main():
     save_payload('huck.json', huck, all_entries)
     save_payload('lensculture.json', lensculture, all_entries)
     save_payload('odlp.json', odlp, all_entries)
+    save_payload('magnum.json', magnum, all_entries)
     save_payload('feeds.json', all_entries, all_entries)
 
     print('  7. Subiendo a GitHub...')
     try:
         subprocess.run(
-            ['git', 'add', 'lomography.json', 'booooooom.json', 'tpj.json', 'swan.json', 'huck.json', 'lensculture.json', 'odlp.json', 'feeds.json',
-             'lomography_articles.json', 'booooooom_articles.json', 'swan_articles.json', 'lensculture_articles.json', 'odlp_articles.json'],
+            ['git', 'add', 'lomography.json', 'booooooom.json', 'tpj.json', 'swan.json', 'huck.json', 'lensculture.json', 'odlp.json', 'magnum.json', 'feeds.json',
+             'lomography_articles.json', 'booooooom_articles.json', 'swan_articles.json', 'lensculture_articles.json', 'odlp_articles.json', 'magnum_articles.json'],
             capture_output=True, text=True, cwd=DIR
         )
         res = subprocess.run(

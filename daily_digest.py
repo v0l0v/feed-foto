@@ -5,7 +5,8 @@ import urllib.request
 from datetime import date, datetime
 
 from server import firecrawl_scrape, parse_magazine_list, clean_lomo_credit_name, trim_lomo_body
-from update_static_data import fetch_booooooom, fetch_tpj, fetch_swan, fetch_huck, fetch_lensculture, fetch_odlp
+from update_static_data import (fetch_booooooom, fetch_tpj, fetch_swan, fetch_huck,
+                                fetch_lensculture, fetch_odlp, fetch_magnum)
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.join(DIR, 'resumenes')
@@ -21,6 +22,7 @@ SOURCES = [
     ('huck', 'Huck Magazine'),
     ('lensculture', 'LensCulture'),
     ('odlp', 'L\'Œil de la Photographie'),
+    ('magnum', 'Magnum Photos'),
 ]
 
 RSS_SOURCES = [
@@ -30,6 +32,7 @@ RSS_SOURCES = [
     ('huck', 'Huck Magazine', fetch_huck),
     ('lensculture', 'LensCulture', fetch_lensculture),
     ('odlp', 'L\'Œil de la Photographie', fetch_odlp),
+    ('magnum', 'Magnum Photos', fetch_magnum),
 ]
 
 EMOJI_RE = re.compile(

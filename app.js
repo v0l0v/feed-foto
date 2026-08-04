@@ -16,7 +16,7 @@ const RSS_PROXIES = [
   u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
 ];
 const REFRESH_MS = 10 * 60 * 1000;
-const ALL_SOURCES = ['colossal', 'lomography', 'booooooom', 'tpj', 'swan', 'huck', 'lensculture', 'odlp'];
+const ALL_SOURCES = ['colossal', 'lomography', 'booooooom', 'tpj', 'swan', 'huck', 'lensculture', 'odlp', 'magnum'];
 const SOURCES_KEY = 'feedfoto.sources';
 const PODCAST_RELEASE = 'https://github.com/v0l0v/puntodevista/releases/download/episodios';
 const PODCAST_COVER = 'podcast-cover.png';
@@ -133,8 +133,8 @@ function saveSources() {
 }
 
 async function loadFeeds() {
-  const [colossal, lomo, boom, tpj, swan, huck, lensculture, odlp] = await Promise.all([fetchColossal(), fetchLomography(), fetchBooooooom(), fetchTpj(), fetchSwan(), fetchHuck(), fetchLensCulture(), fetchOdlp()]);
-  window.__allEntries = [...colossal, ...lomo, ...boom, ...tpj, ...swan, ...huck, ...lensculture, ...odlp].sort((a, b) => (b._parsedDate || 0) - (a._parsedDate || 0));
+  const [colossal, lomo, boom, tpj, swan, huck, lensculture, odlp, magnum] = await Promise.all([fetchColossal(), fetchLomography(), fetchBooooooom(), fetchTpj(), fetchSwan(), fetchHuck(), fetchLensCulture(), fetchOdlp(), fetchMagnum()]);
+  window.__allEntries = [...colossal, ...lomo, ...boom, ...tpj, ...swan, ...huck, ...lensculture, ...odlp, ...magnum].sort((a, b) => (b._parsedDate || 0) - (a._parsedDate || 0));
   if (!window.__allEntries.length) { showEmpty(); return; }
   applyFilter();
 }
@@ -393,6 +393,23 @@ function normalizeOdlp(items) {
   }));
 }
 
+async function fetchMagnum() {
+  const fallback = await fetchApiOrJson('/api/magnum', 'magnum.json', normalizeMagnum);
+  return fallback;
+}
+
+function normalizeMagnum(items) {
+  return items.map(i => ({
+    _source: 'magnum',
+    _id: i.link || i._id,
+    _parsedDate: (i.date || i._parsedDate) ? new Date(i.date || i._parsedDate) : null,
+    link: i.link,
+    title: i.title,
+    content: i.content || i.excerpt,
+    thumbnail: i.thumbnail
+  }));
+}
+
 function extractImg(post) {
   if (post.thumbnail) return post.thumbnail;
   const m = (post.content || '').match(/<img[^>]+src=["']([^"']+)["']/);
@@ -477,7 +494,7 @@ function render(entries) {
         <div class="card-overlay"></div>
       </div>
       <div class="card-info">
-        <div class="card-source">${e._source === 'lomography' ? 'Lomography Magazine' : e._source === 'booooooom' ? 'Booooooom' : e._source === 'tpj' ? 'The Photographic Journal' : e._source === 'swan' ? 'Swann Galleries' : e._source === 'huck' ? 'Huck Magazine' : e._source === 'lensculture' ? 'LensCulture' : e._source === 'odlp' ? "L'Œil de la Photographie" : 'Colossal · Fotografía'}</div>
+        <div class="card-source">${e._source === 'lomography' ? 'Lomography Magazine' : e._source === 'booooooom' ? 'Booooooom' : e._source === 'tpj' ? 'The Photographic Journal' : e._source === 'swan' ? 'Swann Galleries' : e._source === 'huck' ? 'Huck Magazine' : e._source === 'lensculture' ? 'LensCulture' : e._source === 'odlp' ? "L'Œil de la Photographie" : e._source === 'magnum' ? 'Magnum Photos' : 'Colossal · Fotografía'}</div>
         <div class="card-title"><a href="${e.link}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${e.title}</a></div>
         <div class="card-meta">
           <span class="card-date">${e._parsedDate ? fmtDate(e._parsedDate) : ''}</span>
@@ -494,7 +511,8 @@ function render(entries) {
   const swan = entries.slice(0, 100).filter(e => e._source === 'swan').length;
   const huck = entries.slice(0, 100).filter(e => e._source === 'huck').length;
   const lensculture = entries.slice(0, 100).filter(e => e._source === 'lensculture').length;
-  const odlp = total - colossal - lomo - boom - tpj - swan - huck - lensculture;
+  const odlp = entries.slice(0, 100).filter(e => e._source === 'odlp').length;
+  const magnum = total - colossal - lomo - boom - tpj - swan - huck - lensculture - odlp;
   document.getElementById('count-colossal').textContent = String(colossal);
   document.getElementById('count-lomography').textContent = String(lomo);
   document.getElementById('count-booooooom').textContent = String(boom);
@@ -503,6 +521,7 @@ function render(entries) {
   document.getElementById('count-huck').textContent = String(huck);
   document.getElementById('count-lensculture').textContent = String(lensculture);
   document.getElementById('count-odlp').textContent = String(odlp);
+  document.getElementById('count-magnum').textContent = String(magnum);
   document.getElementById('count-all').textContent = String(total);
   document.getElementById('footer-info').textContent = total + ' fotografías';
   document.getElementById('empty').classList.toggle('hide', entries.length > 0);
@@ -739,6 +758,34 @@ function renderOdlpArticle(body, entry, data) {
       <h2 class="modal-title">${entry.title}</h2>
       <div class="modal-meta">
         <span class="modal-source">L'Œil de la Photographie</span>
+        ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
+      </div>
+    </div>
+    <div class="modal-article">
+      <div class="modal-article-content">${data.content}</div>
+      <div class="modal-footer" style="padding-top:2rem">
+        <a href="${entry.link}" target="_blank" rel="noopener" class="modal-link-tag">Ver original →</a>
+      </div>
+    </div>
+  `;
+  body.dataset.lomoImages = JSON.stringify(images.map(i => ({ url: i.url, caption: i.alt || '' })));
+}
+
+function renderMagnumArticle(body, entry, data) {
+  const images = data.images || [];
+  const socialLinks = data.content ? extractSocialLinks(data.content) : [];
+  const linksHTML = socialLinks.length ? '<div class="modal-links">' + socialLinks.map(l => '<a href="' + l.url + '" target="_blank" rel="noopener" class="modal-link-tag link-' + l.platform + '">' + l.text + '</a>').join('') + '</div>' : '';
+  body.innerHTML = `
+    <div class="modal-tools">
+      ${images.length ? `<button class="modal-tool-btn" onclick="openGallery()">Galería (${images.length})</button>` : ''}
+      <button class="modal-tool-btn" onclick="toggleFullscreen()">Pantalla completa</button>
+      <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>
+    </div>
+    ${linksHTML}
+    <div class="modal-title-group">
+      <h2 class="modal-title">${entry.title}</h2>
+      <div class="modal-meta">
+        <span class="modal-source">Magnum Photos</span>
         ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
       </div>
     </div>
@@ -1085,6 +1132,48 @@ async function openModal(card) {
           <h2 class="modal-title">${entry.title}</h2>
           <div class="modal-meta">
             <span class="modal-source">L'Œil de la Photographie</span>
+            ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
+          </div>
+        </div>
+        <div class="modal-article">
+          <p class="modal-error">no se pudo cargar el contenido desde este servidor</p>
+          <div class="modal-footer" style="padding-top:2rem">
+            <a href="${entry.link}" target="_blank" rel="noopener" class="modal-link-tag">Ver original →</a>
+          </div>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  if (source === 'magnum') {
+    const entry = window.__allEntries?.find(e => e._id === id);
+    if (!entry) { body.innerHTML = '<p class="modal-error">error</p>'; return; }
+    let data = null;
+    try {
+      const resp = await fetch(`/api/magnum/article?url=${encodeURIComponent(entry.link)}`);
+      const d = await resp.json();
+      if (d.status === 'ok') data = d;
+    } catch {}
+    if (!data) {
+      try {
+        const resp = await fetch('magnum_articles.json');
+        const cache = await resp.json();
+        const cached = (cache.articles || cache)[entry.link];
+        if (cached && cached.status === 'ok') data = cached;
+      } catch {}
+    }
+    if (data) {
+      renderMagnumArticle(body, entry, data);
+    } else {
+      body.innerHTML = `
+        <div class="modal-tools">
+          <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>
+        </div>
+        <div class="modal-title-group">
+          <h2 class="modal-title">${entry.title}</h2>
+          <div class="modal-meta">
+            <span class="modal-source">Magnum Photos</span>
             ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
           </div>
         </div>
