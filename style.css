@@ -1,5 +1,23 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* ── Skip link (accesibilidad / teclado) ───────────────────────────────────── */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  z-index: 9999;
+  background: var(--accent);
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  border-radius: 0 0 6px 6px;
+  transition: top 0.15s ease;
+}
+.skip-link:focus { top: 0; }
+
 :root {
   --bg: #0a0a0a;
   --surface: #161616;
@@ -7,6 +25,8 @@
   --accent: #ff0100;
   --accent-2: #ff0100;
   --gap: 3px;
+  /* Zonas táctiles mínimas (WCAG 2.5.5) */
+  --touch-min: 44px;
 }
 
 html { background: var(--bg); }
@@ -69,12 +89,23 @@ header {
   text-transform: uppercase;
 }
 
+/* ── Focus visible global (WCAG 2.4.7) ────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+/* Quitamos el outline por defecto solo cuando hay :focus-visible */
+:focus:not(:focus-visible) { outline: none; }
+
 .sources-btn {
   background: rgba(255,255,255,0.08);
   color: #ddd;
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 4px;
-  padding: 0.35rem 0.8rem;
+  /* Zona táctil mínima */
+  min-height: var(--touch-min);
+  padding: 0 0.9rem;
   font-size: 0.6rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -198,14 +229,7 @@ header {
 
 #empty.hide { display: none; }
 
-#entries {
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: var(--gap);
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: var(--gap);
-}
+
 
 .card {
   position: relative;
@@ -625,13 +649,161 @@ footer {
   opacity: 0.15;
 }
 
-@media (max-width: 720px) {
-  #entries { grid-template-columns: 1fr; }
-  .card { aspect-ratio: 4 / 3; }
-  .card-info { padding: 1.5rem 1rem 1rem; }
-  .card-title { font-size: 0.85rem; }
-  .header-inner { padding: 0.8rem 1rem; }
-  #sources-btn, #sources-panel { display: none; }
+/* ════════════════════════════════════════════════════════
+   RESPONSIVE + ACCESIBILIDAD
+   ════════════════════════════════════════════════════════ */
+
+/* ── Grid fluido ───────────────────────────────────────── */
+#entries {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: var(--gap);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
+  gap: var(--gap);
+}
+
+/* ── Tablet (≤900px) ───────────────────────────────────── */
+@media (max-width: 900px) {
+  #entries {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .header-inner { padding: 0.75rem 1.2rem; }
+  .logo-text { font-size: 1.1rem; }
+}
+
+/* ── Móvil (≤600px) ────────────────────────────────────── */
+@media (max-width: 600px) {
+  /* Header */
+  .header-inner {
+    padding: 0 1rem;
+    height: 56px;
+  }
+  .logo-text { font-size: 1rem; }
+  .logo-img { width: 1.2rem; height: 1.2rem; }
+
+  /* Botones: más grandes para touch */
+  .sources-btn {
+    font-size: 0.65rem;
+    padding: 0 0.7rem;
+    min-height: var(--touch-min);
+  }
+
+  /* Grid: 1 columna */
+  #entries {
+    grid-template-columns: 1fr;
+    gap: 2px;
+    padding: 2px;
+  }
+
+  /* Cards: siempre mostrar la info (sin hover en touch) */
+  .card { aspect-ratio: 16 / 9; }
+  .card.tall { aspect-ratio: 4 / 3; }
+
+  .card-info {
+    opacity: 1 !important;
+    transform: none !important;
+    padding: 1.8rem 0.9rem 0.9rem;
+  }
+  .card-meta { opacity: 1 !important; }
+  .card-overlay { opacity: 1 !important; }
+
+  /* Sin tilt 3D en táctil */
+  .card, .card.is-tilting {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Panel de fuentes: ancho completo */
+  #sources-panel {
+    position: fixed;
+    top: 56px;
+    left: 0; right: 0;
+    width: 100%;
+    max-height: calc(100vh - 56px);
+    overflow-y: auto;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    transform-origin: top center;
+  }
+  .source-row {
+    min-height: var(--touch-min);
+    font-size: 0.8rem;
+    padding: 0 0.8rem;
+  }
+  .source-row input {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Modal: pantalla completa */
+  #modal-panel {
+    width: 100%;
+    max-width: 100%;
+    max-height: 100dvh;
+    border-radius: 0;
+    border: none;
+  }
+  #modal-body { padding: 1.2rem 1.1rem; }
+  .modal-title { font-size: 1.1rem; }
+  .modal-footer { flex-direction: column; gap: 0.8rem; align-items: flex-start; }
+
+  /* Player bar: compacto */
+  #podcast-player-bar {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 12px 12px 0 0;
+    transform: none;
+    padding: 0.5rem 0.8rem;
+  }
+  #bar-img { width: 36px; height: 36px; }
+  #bar-title { font-size: 0.7rem; }
+  .podcast-player .podcast-time { display: none; }
+  .podcast-player input[type="range"] { display: none; }
+
+  /* Footer */
+  footer { padding: 0 1rem; margin-bottom: 5rem; }
+}
+
+/* ── prefers-reduced-motion (accesibilidad) ────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .card, .card.is-tilting {
+    transform: none !important;
+  }
+  .card-image.loaded {
+    transform: none !important;
+  }
+}
+
+/* ── Tamaño de texto mínimo legible (WCAG 1.4.4) ─────── */
+.card-source,
+.card-meta,
+.card-date,
+.gallery-counter,
+.gallery-back {
+  font-size: max(0.5rem, 11px);
+}
+
+/* ── Áreas táctiles mínimas en botones del modal ─────── */
+.modal-tool-btn,
+.gallery-nav,
+.gallery-back,
+.modal-original {
+  min-height: var(--touch-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* PHOTOGRAPHERS */

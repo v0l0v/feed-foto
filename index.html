@@ -9,13 +9,15 @@
 </head>
 <body>
 
+<a class="skip-link" href="#entries">Saltar al contenido</a>
+
 <header>
   <div class="header-inner">
       <span class="logo" onclick="toggleFullscreen()" style="cursor:pointer"><img src="pdv.png" alt="Punto de vista" class="logo-img"><span class="logo-text">Punto de vista</span></span>
-    <div class="header-controls">
-      <button id="podcast-filter-btn" class="sources-btn podcast-btn" type="button">podcast</button>
-      <button id="sources-btn" class="sources-btn" type="button" aria-haspopup="true" aria-expanded="false">
-        fuentes <span id="sources-btn-count">todas</span> ⌄
+    <div class="header-controls" role="toolbar" aria-label="Controles de filtro">
+      <button id="podcast-filter-btn" class="sources-btn podcast-btn" type="button" aria-pressed="false" aria-label="Filtrar por podcast">podcast</button>
+      <button id="sources-btn" class="sources-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="sources-panel" aria-label="Seleccionar fuentes">
+        fuentes <span id="sources-btn-count" aria-live="polite">todas</span> ⌄
       </button>
     </div>
   </div>
@@ -41,7 +43,7 @@
 <div id="empty" class="hide">sin entradas</div>
 <main id="entries"></main>
 
-<div id="modal" class="hide">
+<div id="modal" class="hide" role="dialog" aria-modal="true" aria-label="Detalle del artículo">
   <div id="modal-backdrop"></div>
   <div id="modal-panel">
     <div id="modal-body"></div>

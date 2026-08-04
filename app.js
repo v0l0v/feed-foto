@@ -509,7 +509,9 @@ function applyFilter() {
   render(entries);
   
   const isPodcastOnly = __sources.size === 1 && __sources.has('podcast');
-  document.getElementById('podcast-filter-btn').classList.toggle('active', isPodcastOnly);
+  const podBtn = document.getElementById('podcast-filter-btn');
+  podBtn.classList.toggle('active', isPodcastOnly);
+  podBtn.setAttribute('aria-pressed', isPodcastOnly ? 'true' : 'false');
   document.getElementById('chk-all').checked = __sources.size === 0;
   
   ALL_SOURCES.forEach(src => {
