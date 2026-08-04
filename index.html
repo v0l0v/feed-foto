@@ -13,13 +13,24 @@
 
 <header>
   <div class="header-inner">
-      <span class="logo" onclick="toggleFullscreen()" style="cursor:pointer"><img src="pdv.png" alt="Punto de vista" class="logo-img"><span class="logo-text">Punto de vista</span></span>
+    <span class="logo" onclick="toggleFullscreen()" style="cursor:pointer"><img src="pdv.png" alt="Punto de vista" class="logo-img"><span class="logo-text">Punto de vista</span></span>
     <div class="header-controls" role="toolbar" aria-label="Controles de filtro">
       <button id="podcast-filter-btn" class="sources-btn podcast-btn" type="button" aria-pressed="false" aria-label="Filtrar por podcast">podcast</button>
+      <button id="date-btn" class="sources-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="date-panel" aria-label="Filtrar por fecha">
+        cuando <span id="date-btn-label">todo</span> ⌄
+      </button>
       <button id="sources-btn" class="sources-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="sources-panel" aria-label="Seleccionar fuentes">
         fuentes <span id="sources-btn-count" aria-live="polite">todas</span> ⌄
       </button>
     </div>
+  </div>
+  <div id="date-panel" class="hide">
+    <button class="date-row active" data-period="all" aria-pressed="true">Todo el tiempo</button>
+    <button class="date-row" data-period="year"  aria-pressed="false">Este año</button>
+    <div id="date-months" class="date-months-grid"></div>
+    <button class="date-row" data-period="month" aria-pressed="false">Este mes</button>
+    <button class="date-row" data-period="week"  aria-pressed="false">Esta semana</button>
+    <button class="date-row" data-period="day"   aria-pressed="false">Hoy</button>
   </div>
   <div id="sources-panel" class="hide">
     <label class="source-row all" id="source-all-row">

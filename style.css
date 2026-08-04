@@ -806,6 +806,109 @@ footer {
   justify-content: center;
 }
 
+/* DATE PANEL */
+#date-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 1rem;
+  z-index: 60;
+  min-width: 220px;
+  background: #171717;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transform-origin: top right;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+#date-panel.hide {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.97);
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease,
+    visibility 0s 0.15s;
+}
+
+.date-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--touch-min);
+  padding: 0 0.5rem;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ccc;
+  cursor: pointer;
+  border-radius: 4px;
+  text-align: left;
+  transition: background 0.15s, color 0.15s;
+}
+.date-row:hover { background: rgba(255,255,255,0.05); }
+.date-row.active {
+  color: #ff0100;
+}
+
+/* Grid de meses (12 meses del último año) */
+.date-months-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  padding: 0.3rem 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin: 0.2rem 0;
+}
+.date-month-btn {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(200,200,200,0.7);
+  cursor: pointer;
+  padding: 0.35rem 0.2rem;
+  border-radius: 3px;
+  text-align: center;
+  transition: background 0.15s, color 0.15s;
+  min-height: 32px;
+}
+.date-month-btn:hover { background: rgba(255,255,255,0.07); color: #fff; }
+.date-month-btn.active {
+  background: rgba(255,1,0,0.15);
+  color: #ff0100;
+}
+.date-month-btn.has-entries { color: rgba(220,220,220,0.9); }
+.date-month-btn.empty { opacity: 0.3; cursor: default; }
+
+@media (max-width: 600px) {
+  #date-panel {
+    position: fixed;
+    top: 56px;
+    left: 0; right: 0;
+    width: 100%;
+    max-height: calc(100vh - 56px);
+    overflow-y: auto;
+    border-radius: 0;
+    transform-origin: top center;
+  }
+  .date-months-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
 /* PHOTOGRAPHERS */
 .modal-photographers {
   display: flex;

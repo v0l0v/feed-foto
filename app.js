@@ -86,23 +86,72 @@ function updatePodcastProgress(player, audio) {
 
 document.addEventListener('DOMContentLoaded', () => {
   loadSources();
-  const btn = document.getElementById('sources-btn');
-  const panel = document.getElementById('sources-panel');
-  btn.addEventListener('click', (e) => {
+
+  // ── Panel Fuentes ──────────────────────────────────────────────────
+  const sourcesBtn = document.getElementById('sources-btn');
+  const sourcesPanel = document.getElementById('sources-panel');
+  const dateBtn = document.getElementById('date-btn');
+  const datePanel = document.getElementById('date-panel');
+
+  function closeAllPanels() {
+    sourcesPanel.classList.add('hide');
+    sourcesBtn.classList.remove('active');
+    sourcesBtn.setAttribute('aria-expanded', 'false');
+    datePanel.classList.add('hide');
+    dateBtn.classList.remove('active');
+    dateBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  sourcesBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    const open = panel.classList.toggle('hide') === false;
-    btn.classList.toggle('active', open);
-    btn.setAttribute('aria-expanded', open);
-  });
-  document.addEventListener('click', (e) => {
-    if (!panel.classList.contains('hide') && !panel.contains(e.target) && e.target !== btn) {
-      panel.classList.add('hide');
-      btn.classList.remove('active');
-      btn.setAttribute('aria-expanded', 'false');
+    const wasOpen = !sourcesPanel.classList.contains('hide');
+    closeAllPanels();
+    if (!wasOpen) {
+      sourcesPanel.classList.remove('hide');
+      sourcesBtn.classList.add('active');
+      sourcesBtn.setAttribute('aria-expanded', 'true');
     }
   });
-  
-  // Isolate "All" row click
+
+  // ── Panel Fecha ────────────────────────────────────────────────────
+  dateBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const wasOpen = !datePanel.classList.contains('hide');
+    closeAllPanels();
+    if (!wasOpen) {
+      buildMonthsGrid();
+      datePanel.classList.remove('hide');
+      dateBtn.classList.add('active');
+      dateBtn.setAttribute('aria-expanded', 'true');
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!sourcesPanel.classList.contains('hide') &&
+        !sourcesPanel.contains(e.target) && e.target !== sourcesBtn) {
+      sourcesPanel.classList.add('hide');
+      sourcesBtn.classList.remove('active');
+      sourcesBtn.setAttribute('aria-expanded', 'false');
+    }
+    if (!datePanel.classList.contains('hide') &&
+        !datePanel.contains(e.target) && e.target !== dateBtn) {
+      datePanel.classList.add('hide');
+      dateBtn.classList.remove('active');
+      dateBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  // Filas de período (todo, año, mes, semana, hoy)
+  datePanel.querySelectorAll('.date-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const period = row.dataset.period;
+      if (period === 'year') return; // "Este año" solo sirve como cabecera del grid
+      setDateFilter(period, null);
+      closeAllPanels();
+    });
+  });
+
+  // ── Panel Fuentes: checkboxes ──────────────────────────────────────
   document.getElementById('source-all-row').addEventListener('click', (e) => {
     if (e.target.tagName === 'INPUT') return;
     e.preventDefault();
@@ -110,26 +159,22 @@ document.addEventListener('DOMContentLoaded', () => {
     saveSources();
     applyFilter();
   });
-  
+
   document.getElementById('chk-all').addEventListener('change', (e) => {
     if (e.target.checked) __sources.clear();
     else __sources = new Set(ALL_SOURCES);
     saveSources();
     applyFilter();
   });
-  
+
   ALL_SOURCES.forEach(src => {
     const row = document.querySelector(`.source-row[data-src="${src}"]`);
-    
-    // Checkbox behavior
     row.querySelector('input').addEventListener('change', (e) => {
       if (e.target.checked) __sources.add(src);
       else __sources.delete(src);
       saveSources();
       applyFilter();
     });
-    
-    // Label click behavior (Isolate source)
     row.addEventListener('click', (e) => {
       if (e.target.tagName === 'INPUT') return;
       e.preventDefault();
@@ -163,6 +208,124 @@ document.addEventListener('DOMContentLoaded', () => {
   initPodcastPlayers();
   setInterval(() => { if (!document.hidden) refreshFeeds(); }, REFRESH_MS);
 });
+
+// ── Estado del filtro de fecha ─────────────────────────────────────────────
+// period: 'all' | 'year' | 'month' | 'week' | 'day' | 'month-specific'
+// value:  null  | null   | null    | null   | null  | Date (primer día del mes)
+let __dateFilter = { period: 'all', value: null };
+
+const MONTH_NAMES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+function setDateFilter(period, value) {
+  __dateFilter = { period, value };
+  applyFilter();
+  updateDateBtnLabel();
+  // Actualizar estado visual del panel
+  document.querySelectorAll('.date-row').forEach(r => {
+    const isActive = r.dataset.period === period && period !== 'month-specific';
+    r.classList.toggle('active', isActive);
+    r.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+  document.querySelectorAll('.date-month-btn').forEach(b => {
+    const isActive = period === 'month-specific' &&
+      value && b.dataset.year === String(value.getFullYear()) &&
+      b.dataset.month === String(value.getMonth());
+    b.classList.toggle('active', isActive);
+  });
+}
+
+function updateDateBtnLabel() {
+  const { period, value } = __dateFilter;
+  const labels = {
+    all: 'todo', year: 'este año', month: 'este mes',
+    week: 'esta semana', day: 'hoy'
+  };
+  let label = labels[period] || 'todo';
+  if (period === 'month-specific' && value) {
+    label = `${MONTH_NAMES[value.getMonth()]} ${value.getFullYear()}`;
+  }
+  document.getElementById('date-btn-label').textContent = label;
+  const isFiltered = period !== 'all';
+  document.getElementById('date-btn').classList.toggle('active', isFiltered);
+}
+
+function getDateRange() {
+  const now = new Date();
+  const { period, value } = __dateFilter;
+  if (period === 'all') return null;
+  if (period === 'day') {
+    const start = new Date(now); start.setHours(0,0,0,0);
+    return { from: start.getTime(), to: Infinity };
+  }
+  if (period === 'week') {
+    const start = new Date(now);
+    start.setDate(start.getDate() - 6); start.setHours(0,0,0,0);
+    return { from: start.getTime(), to: Infinity };
+  }
+  if (period === 'month') {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { from: start.getTime(), to: Infinity };
+  }
+  if (period === 'year') {
+    const start = new Date(now.getFullYear(), 0, 1);
+    return { from: start.getTime(), to: Infinity };
+  }
+  if (period === 'month-specific' && value) {
+    const start = new Date(value.getFullYear(), value.getMonth(), 1);
+    const end   = new Date(value.getFullYear(), value.getMonth() + 1, 0, 23, 59, 59, 999);
+    return { from: start.getTime(), to: end.getTime() };
+  }
+  return null;
+}
+
+function isDateVisible(entry) {
+  const range = getDateRange();
+  if (!range) return true;
+  const t = entry._parsedDate || 0;
+  return t >= range.from && t <= range.to;
+}
+
+function buildMonthsGrid() {
+  const container = document.getElementById('date-months');
+  container.innerHTML = '';
+  const now = new Date();
+  const entries = window.__allEntries || [];
+
+  // Generar los 12 últimos meses (del más reciente al más antiguo)
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    const count = entries.filter(e => {
+      if (!e._parsedDate) return false;
+      const ed = new Date(e._parsedDate);
+      return ed.getFullYear() === y && ed.getMonth() === m;
+    }).length;
+
+    const btn = document.createElement('button');
+    btn.className = 'date-month-btn' + (count > 0 ? ' has-entries' : ' empty');
+    btn.dataset.year = y;
+    btn.dataset.month = m;
+    btn.setAttribute('aria-label', `${MONTH_NAMES[m]} ${y}: ${count} artículos`);
+    btn.innerHTML = `<span>${MONTH_NAMES[m]}</span><br><span style="opacity:.5;font-size:.5rem">${y}</span>`;
+
+    if (__dateFilter.period === 'month-specific' && __dateFilter.value &&
+        __dateFilter.value.getFullYear() === y && __dateFilter.value.getMonth() === m) {
+      btn.classList.add('active');
+    }
+
+    if (count > 0) {
+      btn.addEventListener('click', () => {
+        setDateFilter('month-specific', new Date(y, m, 1));
+        document.getElementById('date-panel').classList.add('hide');
+        document.getElementById('date-btn').classList.remove('active');
+        document.getElementById('date-btn').setAttribute('aria-expanded', 'false');
+      });
+    }
+    container.appendChild(btn);
+  }
+}
+
 
 let __sources = new Set();
 
@@ -504,8 +667,9 @@ function isMobile() {
 }
 
 function applyFilter() {
-  const entries = isMobile() ? window.__allEntries
-    : window.__allEntries.filter(e => isSourceVisible(e._source));
+  const entries = (window.__allEntries || [])
+    .filter(e => isSourceVisible(e._source))
+    .filter(e => isDateVisible(e));
   render(entries);
   
   const isPodcastOnly = __sources.size === 1 && __sources.has('podcast');
