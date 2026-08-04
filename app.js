@@ -485,7 +485,7 @@ function extractImg(post) {
 }
 
 function isSourceVisible(src) {
-  if (__sources.has('podcast')) return false;
+  if (__sources.has('podcast')) return src === 'podcast';
   return __sources.size === 0 || __sources.has(src);
 }
 
@@ -607,7 +607,8 @@ function render(entries) {
   document.getElementById('count-magnum').textContent = String(magnum);
   document.getElementById('count-all').textContent = String(total);
   document.getElementById('footer-info').textContent = total + ' fotografías';
-  document.getElementById('empty').classList.toggle('hide', entries.length > 0);
+  const showEmpty = entries.length === 0 && !(__sources.has('podcast') && __podcast);
+  document.getElementById('empty').classList.toggle('hide', !showEmpty);
 }
 
 function fmtDate(d) {
