@@ -82,6 +82,39 @@ def main():
         odlp = load_previous_items('odlp.json')
     print(f'     {len(odlp)} artículos')
 
+    print('  6d. Actualizando cachés de artículos...')
+    if lomo:
+        update_lomography_articles(lomo)
+    if boom:
+        update_booooooom_articles(boom)
+    
+    # Load caches and inject thumbnails
+    from update_static_data import load_article_cache
+    
+    if swan:
+        update_swan_articles(swan)
+        swan_cache = load_article_cache('swan_articles.json')
+        for item in swan:
+            data = swan_cache.get(item.get('link'))
+            if isinstance(data, dict) and data.get('thumbnail'):
+                item['thumbnail'] = data['thumbnail']
+                
+    if lensculture:
+        update_lensculture_articles(lensculture[:10])
+        lens_cache = load_article_cache('lensculture_articles.json')
+        for item in lensculture:
+            data = lens_cache.get(item.get('link'))
+            if isinstance(data, dict) and data.get('thumbnail'):
+                item['thumbnail'] = data['thumbnail']
+                
+    if odlp:
+        update_odlp_articles(odlp[:10])
+        odlp_cache = load_article_cache('odlp_articles.json')
+        for item in odlp:
+            data = odlp_cache.get(item.get('link'))
+            if isinstance(data, dict) and data.get('thumbnail'):
+                item['thumbnail'] = data['thumbnail']
+
     all_entries = sorted(colossal + lomo + boom + tpj + swan + huck + lensculture + odlp,
                          key=lambda x: x.get('_parsedDate') or x.get('date') or '',
                          reverse=True)
@@ -94,18 +127,6 @@ def main():
     save_payload('lensculture.json', lensculture, all_entries)
     save_payload('odlp.json', odlp, all_entries)
     save_payload('feeds.json', all_entries, all_entries)
-
-    print('  6d. Actualizando cachés de artículos...')
-    if lomo:
-        update_lomography_articles(lomo)
-    if boom:
-        update_booooooom_articles(boom)
-    if swan:
-        update_swan_articles(swan)
-    if lensculture:
-        update_lensculture_articles(lensculture[:10])
-    if odlp:
-        update_odlp_articles(odlp[:10])
 
     print('  7. Subiendo a GitHub...')
     try:

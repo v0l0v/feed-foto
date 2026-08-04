@@ -538,7 +538,8 @@ def scrape_lensculture_article(url):
     images = [img for img in images if 'logo' not in img['url'].lower() and 'menu-icon' not in img['url'].lower()]
     
     content = md_to_html(content_md)
-    data = {'status': 'ok', 'content': content, 'images': images, 'credits': []}
+    thumbnail = images[0]['url'] if images else ''
+    data = {'status': 'ok', 'content': content, 'images': images, 'credits': [], 'thumbnail': thumbnail}
     LENSCULTURE_ARTICLE_CACHE[url] = {'data': data, 'time': now}
     return data
 
@@ -579,7 +580,8 @@ def scrape_odlp_article(url):
     images = [img for img in images if 'loeildelaphotographie.com/wp-content/uploads/' in img['url']]
     
     content = md_to_html(content_md)
-    data = {'status': 'ok', 'content': content, 'images': images, 'credits': []}
+    thumbnail = images[0]['url'] if images else ''
+    data = {'status': 'ok', 'content': content, 'images': images, 'credits': [], 'thumbnail': thumbnail}
     ODLP_ARTICLE_CACHE[url] = {'data': data, 'time': now}
     return data
 

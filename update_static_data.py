@@ -362,12 +362,24 @@ def main():
     print('  9b. LensCulture articles (cache GitHub Pages)...')
     purge_bad_articles('lensculture_articles.json')
     new_lens_articles = update_lensculture_articles(lensculture[:10])
-    print(f'     {new_lens_articles} nuevos | {len(load_article_cache("lensculture_articles.json"))} en cache')
+    lens_cache = load_article_cache('lensculture_articles.json')
+    print(f'     {new_lens_articles} nuevos | {len(lens_cache)} en cache')
+
+    for item in lensculture:
+        data = lens_cache.get(item.get('link'))
+        if isinstance(data, dict) and data.get('thumbnail'):
+            item['thumbnail'] = data['thumbnail']
 
     print('  9c. L\'Œil de la Photographie articles (cache GitHub Pages)...')
     purge_bad_articles('odlp_articles.json')
     new_odlp_articles = update_odlp_articles(odlp[:10])
-    print(f'     {new_odlp_articles} nuevos | {len(load_article_cache("odlp_articles.json"))} en cache')
+    odlp_cache = load_article_cache('odlp_articles.json')
+    print(f'     {new_odlp_articles} nuevos | {len(odlp_cache)} en cache')
+
+    for item in odlp:
+        data = odlp_cache.get(item.get('link'))
+        if isinstance(data, dict) and data.get('thumbnail'):
+            item['thumbnail'] = data['thumbnail']
 
     all_entries = sorted(colossal + lomo + boom + tpj + swan + huck + lensculture + odlp,
                          key=lambda x: x.get('_parsedDate') or x.get('date') or '',
