@@ -1008,34 +1008,26 @@ async function openModal(card) {
 
   if (source === 'podcast') {
     const entry = window.__allEntries?.find(e => e._id === id);
-    if (!entry) { body.innerHTML = '<p class="modal-error">error</p>'; return; }
-    const dur = fmtDur(entry.duration);
-    const img = entry.image || PODCAST_COVER;
-    body.innerHTML = `
-      <div class="modal-tools">
-        <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>
-      </div>
-      <div class="modal-title-group" style="text-align:center">
-        <h2 class="modal-title">${entry.title}</h2>
-        <div class="modal-meta">
-          <span class="modal-source">Podcast · Punto de vista</span>
-          ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
-        </div>
-      </div>
-      <div class="modal-article" style="display:flex; flex-direction:column; align-items:center; gap:2rem; padding:2rem 0">
-        <div class="podcast-art" style="width:250px; height:250px; border-radius:8px; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,0.4)">
-          <img src="${img}" style="width:100%; height:100%; object-fit:cover">
-        </div>
-        <div class="podcast-player" data-url="${entry.link}" style="width:100%; max-width:500px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1.2rem; display:flex; flex-direction:column; align-items:center">
-          <button class="podcast-play" aria-label="Reproducir" style="background:#ff0100; border:none; color:#fff; width:45px; height:45px; border-radius:50%; font-size:1.1rem; cursor:pointer; margin-bottom:1rem; transition:transform 0.1s" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">▶</button>
-          <div class="podcast-progress" style="background:rgba(255,255,255,0.1); width:100%; height:4px; border-radius:2px; cursor:pointer; position:relative; margin-bottom:0.8rem"><div class="podcast-progress-fill" style="background:#ff0100; width:0%; height:100%; border-radius:2px"></div></div>
-          <div style="display:flex; justify-content:space-between; align-items:center; width:100%">
-            <span class="podcast-time" style="font-size:0.75rem; color:rgba(255,255,255,0.5)">0:00 / ${dur || '--:--'}</span>
-            <input type="range" class="podcast-volume" min="0" max="1" step="0.05" value="1" aria-label="Volumen" style="width:70px">
-          </div>
-        </div>
-      </div>
-    `;
+    if (entry) {
+      // Substitute the top preloaded podcast player metadata
+      __podcast = {
+        date: entry.date,
+        duration: entry.duration,
+        podcast_title: entry.title.split(' · ')[1] || '',
+        images: entry.images,
+        image: entry.image,
+        num: entry.num
+      };
+      // Re-render feed grid to reflect the change in the top player
+      applyFilter();
+      // Smooth scroll to top to see the player
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Autoplay the selected podcast
+      setTimeout(() => {
+        const playBtn = document.querySelector('.podcast-card .podcast-play');
+        if (playBtn) playBtn.click();
+      }, 300);
+    }
     return;
   }
 
