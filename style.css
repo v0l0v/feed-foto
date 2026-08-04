@@ -780,3 +780,46 @@ footer {
   .podcast-player button { width: 30px; height: 30px; font-size: 0.6rem; }
   .podcast-player input[type="range"] { width: 40px; }
 }
+
+.chips-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0.8rem 2rem 0.5rem 2rem;
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+}
+.chips-container::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+.chip {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.9rem;
+  border-radius: 100px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(240, 236, 228, 0.5);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: rgba(240, 236, 228, 0.8);
+}
+.chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.chip .chip-count {
+  margin-left: 0.4rem;
+  opacity: 0.5;
+  font-size: 0.55rem;
+}

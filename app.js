@@ -98,21 +98,51 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.setAttribute('aria-expanded', 'false');
     }
   });
+  
+  // Isolate "All" row click
+  document.getElementById('source-all-row').addEventListener('click', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    e.preventDefault();
+    __sources.clear();
+    saveSources();
+    applyFilter();
+  });
+  
   document.getElementById('chk-all').addEventListener('change', (e) => {
     if (e.target.checked) __sources.clear();
     else __sources = new Set(ALL_SOURCES);
     saveSources();
     applyFilter();
   });
+  
   ALL_SOURCES.forEach(src => {
-    document.querySelector(`.source-row[data-src="${src}"] input`)
-      .addEventListener('change', (e) => {
-        if (e.target.checked) __sources.add(src);
-        else __sources.delete(src);
-        saveSources();
-        applyFilter();
-      });
+    const row = document.querySelector(`.source-row[data-src="${src}"]`);
+    
+    // Checkbox behavior
+    row.querySelector('input').addEventListener('change', (e) => {
+      if (e.target.checked) __sources.add(src);
+      else __sources.delete(src);
+      saveSources();
+      applyFilter();
+    });
+    
+    // Label click behavior (Isolate source)
+    row.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      e.preventDefault();
+      if (__sources.size === 1 && __sources.has(src)) {
+        __sources.clear();
+      } else {
+        __sources.clear();
+        __sources.add(src);
+      }
+      saveSources();
+      applyFilter();
+    });
   });
+
+  loadSources();
+  sortSourcesUI();
   loadFeeds();
   fetchPodcastMeta();
   initPodcastPlayers();
@@ -525,6 +555,7 @@ function render(entries) {
   document.getElementById('count-all').textContent = String(total);
   document.getElementById('footer-info').textContent = total + ' fotografías';
   document.getElementById('empty').classList.toggle('hide', entries.length > 0);
+  renderChips();
 }
 
 function fmtDate(d) {
@@ -918,6 +949,7 @@ function renderHuckArticle(body, entry) {
 async function openModal(card) {
   const id = card.dataset.id;
   const source = card.dataset.source;
+  incrementReadCount(source);
   const body = document.getElementById('modal-body');
   body.innerHTML = '<div class="modal-loading">cargando…</div>';
   document.getElementById('modal').classList.remove('hide');
@@ -1385,3 +1417,88 @@ document.addEventListener('fullscreenchange', () => {
     document.documentElement.requestFullscreen().catch(() => {});
   }
 });
+
+function getReadCounts() {
+  try {
+    return JSON.parse(localStorage.getItem('feedfoto.read_counts')) || {};
+  } catch {
+    return {};
+  }
+}
+
+function incrementReadCount(source) {
+  if (!source) return;
+  const counts = getReadCounts();
+  counts[source] = (counts[source] || 0) + 1;
+  localStorage.setItem('feedfoto.read_counts', JSON.stringify(counts));
+  sortSourcesUI();
+}
+
+function sortSourcesUI() {
+  const panel = document.getElementById('sources-panel');
+  if (!panel) return;
+  const counts = getReadCounts();
+  const rows = Array.from(panel.querySelectorAll('.source-row:not(.all)'));
+  
+  rows.sort((a, b) => {
+    const srcA = a.dataset.src;
+    const srcB = b.dataset.src;
+    const countA = counts[srcA] || 0;
+    const countB = counts[srcB] || 0;
+    return countB - countA;
+  });
+  
+  rows.forEach(row => panel.appendChild(row));
+}
+
+function renderChips() {
+  const container = document.getElementById('source-chips');
+  if (!container) return;
+  
+  const counts = getReadCounts();
+  const sortedSources = [...ALL_SOURCES].sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
+  
+  let html = `<div class="chip ${__sources.size === 0 ? 'active' : ''}" data-action="all">Todas <span class="chip-count">${window.__allEntries?.length || 0}</span></div>`;
+  
+  sortedSources.forEach(src => {
+    const count = window.__allEntries?.filter(e => e._source === src).length || 0;
+    const isActive = __sources.has(src);
+    const label = getSourceLabel(src);
+    html += `<div class="chip ${isActive ? 'active' : ''}" data-src="${src}">${label} <span class="chip-count">${count}</span></div>`;
+  });
+  
+  container.innerHTML = html;
+  
+  container.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const src = chip.dataset.src;
+      if (chip.dataset.action === 'all') {
+        __sources.clear();
+      } else {
+        if (__sources.size === 1 && __sources.has(src)) {
+          __sources.clear();
+        } else {
+          __sources.clear();
+          __sources.add(src);
+        }
+      }
+      saveSources();
+      applyFilter();
+    });
+  });
+}
+
+function getSourceLabel(src) {
+  switch (src) {
+    case 'colossal': return 'Colossal';
+    case 'lomography': return 'Lomography';
+    case 'booooooom': return 'Booooooom';
+    case 'tpj': return 'TPJ';
+    case 'swan': return 'Swann';
+    case 'huck': return 'Huck';
+    case 'lensculture': return 'LensCulture';
+    case 'odlp': return 'L\'Œil';
+    case 'magnum': return 'Magnum';
+    default: return src;
+  }
+}
