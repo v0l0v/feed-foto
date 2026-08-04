@@ -782,3 +782,72 @@ footer {
   .podcast-player button { width: 30px; height: 30px; font-size: 0.6rem; }
   .podcast-player input[type="range"] { width: 40px; }
 }
+
+/* FLOATING PLAYER BAR (OPTION 3) */
+#podcast-player-bar {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: 90%;
+  max-width: 850px;
+  background: rgba(18, 18, 18, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 1, 0, 0.35);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+  padding: 0.6rem 1.2rem;
+  transition: all 0.3s ease;
+}
+#podcast-player-bar.hide {
+  display: none;
+}
+.bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+#bar-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+.bar-info {
+  flex: 1;
+  min-width: 0;
+}
+#bar-badge {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #ff0100;
+  margin-bottom: 0.1rem;
+}
+#bar-title {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#bar-player {
+  flex: 1.5;
+  margin-left: 0.5rem;
+}
+#bar-close {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  transition: color 0.15s;
+}
+#bar-close:hover {
+  color: #ff0100;
+}

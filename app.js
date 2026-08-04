@@ -202,9 +202,8 @@ async function fetchPodcastMeta() {
     const data = await resp.json();
     if (!Array.isArray(data) || !data.length) return;
     const sorted = [...data].sort((a, b) => String(a.date).localeCompare(String(b.date)));
-    __podcast = { ...sorted[sorted.length - 1], num: sorted.length };
     
-    window.__podcastEntries = sorted.slice(0, -1).map((e, idx) => {
+    window.__podcastEntries = sorted.map((e, idx) => {
       const num = idx + 1;
       return {
         _source: 'podcast',
@@ -531,35 +530,7 @@ function fmtDur(sec) {
 }
 
 function podcastCardHTML() {
-  if (!__podcast) return '';
-  if (__sources.size > 0 && !__sources.has('podcast')) return '';
-  const e = __podcast;
-  const title = `Episodio ${e.num} · ${fmtDateLong(new Date(e.date + 'T00:00:00'))}`;
-  const url = `${PODCAST_RELEASE}/podcast-${e.date}.mp3`;
-  const images = e.images || [];
-  const img = images.length ? images[Math.floor(Math.random() * images.length)] : (e.image || PODCAST_COVER);
-  const dur = fmtDur(e.duration);
-  const podcastTitle = e.podcast_title || '';
-  return `<div class="card podcast-card" data-podcast="1">
-    <div class="podcast-inner">
-      <div class="podcast-art"><img src="${esc(img)}" alt="" loading="lazy"></div>
-      <div class="podcast-body">
-        <div class="podcast-badge"><span class="podcast-dot"></span>Podcast · Punto de vista</div>
-        <h3 class="podcast-title">${esc(title)}</h3>
-        ${podcastTitle ? '<h4 class="podcast-context">' + esc(podcastTitle) + '</h4>' : ''}
-        <div class="podcast-player" data-url="${esc(url)}">
-          <button class="podcast-play" aria-label="Reproducir">▶</button>
-          <div class="podcast-progress"><div class="podcast-progress-fill"></div></div>
-          <span class="podcast-time">0:00 / ${dur || '--:--'}</span>
-          <input type="range" class="podcast-volume" min="0" max="1" step="0.05" value="1" aria-label="Volumen">
-        </div>
-        <div class="podcast-meta">
-          <span class="podcast-ai">Generado por v0l0v IA</span>
-          <a href="podcast.xml" target="_blank" rel="noopener">Feed RSS</a>
-        </div>
-      </div>
-    </div>
-  </div>`;
+  return '';
 }
 
 function render(entries) {
@@ -567,9 +538,9 @@ function render(entries) {
   el.innerHTML = podcastCardHTML() + entries.slice(0, 100).map(e => {
     const isPodcast = e.is_podcast_entry;
     const src = isPodcast ? e.image : extractImg(e);
-    const sourceLabel = isPodcast ? 'Podcast · Punto de vista' : (e._source === 'lomography' ? 'Lomography Magazine' : e._source === 'booooooom' ? 'Booooooom' : e._source === 'tpj' ? 'The Photographic Journal' : e._source === 'swan' ? 'Swann Galleries' : e._source === 'huck' ? 'Huck Magazine' : e._source === 'lensculture' ? 'LensCulture' : e._source === 'odlp' ? "L'Œil de la Photographie" : e._source === 'magnum' ? 'Magnum Photos' : 'Colossal · Fotografía');
+    const sourceLabel = isPodcast ? 'Podcast · Punto de vista' : getSourceLabel(e._source);
     const linkHref = isPodcast ? '#' : e.link;
-    const clickHandler = isPodcast ? 'event.preventDefault()' : 'event.stopPropagation()';
+    const clickHandler = isPodcast ? `playPodcastInBar(${JSON.stringify(e).replace(/"/g, '&quot;')})` : 'event.stopPropagation()';
     return `<div class="card" data-color="?" data-id="${e._id}" data-source="${e._source}" onclick="openModal(this)">
       <div class="card-inner">
         <div class="card-skeleton"></div>
@@ -607,7 +578,7 @@ function render(entries) {
   document.getElementById('count-magnum').textContent = String(magnum);
   document.getElementById('count-all').textContent = String(total);
   document.getElementById('footer-info').textContent = total + ' fotografías';
-  const showEmpty = entries.length === 0 && !(__sources.has('podcast') && __podcast);
+  const showEmpty = entries.length === 0;
   document.getElementById('empty').classList.toggle('hide', !showEmpty);
 }
 
@@ -1010,24 +981,7 @@ async function openModal(card) {
   if (source === 'podcast') {
     const entry = window.__allEntries?.find(e => e._id === id);
     if (entry) {
-      // Substitute the top preloaded podcast player metadata
-      __podcast = {
-        date: entry.date,
-        duration: entry.duration,
-        podcast_title: entry.title.split(' · ')[1] || '',
-        images: entry.images,
-        image: entry.image,
-        num: entry.num
-      };
-      // Re-render feed grid to reflect the change in the top player
-      applyFilter();
-      // Smooth scroll to top to see the player
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      // Autoplay the selected podcast
-      setTimeout(() => {
-        const playBtn = document.querySelector('.podcast-card .podcast-play');
-        if (playBtn) playBtn.click();
-      }, 300);
+      playPodcastInBar(entry);
     }
     return;
   }

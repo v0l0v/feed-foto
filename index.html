@@ -48,6 +48,23 @@
   </div>
 </div>
 
+<div id="podcast-player-bar" class="hide">
+  <div class="bar-inner">
+    <img id="bar-img" src="" alt="">
+    <div class="bar-info">
+      <div id="bar-badge"><span class="podcast-dot"></span> Podcast · Punto de vista</div>
+      <div id="bar-title"></div>
+    </div>
+    <div class="podcast-player" id="bar-player" data-url="">
+      <button class="podcast-play" aria-label="Reproducir">▶</button>
+      <div class="podcast-progress"><div class="podcast-progress-fill"></div></div>
+      <span class="podcast-time">0:00 / --:--</span>
+      <input type="range" class="podcast-volume" min="0" max="1" step="0.05" value="1" aria-label="Volumen">
+    </div>
+    <button id="bar-close" onclick="closePlayerBar()" aria-label="Cerrar reproductor">✕</button>
+  </div>
+</div>
+
 <footer>
   <span>colossal · fotografía</span>
   <a href="podcast.xml">podcast</a>
