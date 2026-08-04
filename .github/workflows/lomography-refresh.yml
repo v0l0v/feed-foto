@@ -40,4 +40,5 @@ jobs:
       - name: Refrescar Lomography (gratis vía Jina, 0 créditos)
         env:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
         run: python3 update_lists.py --fresh-lomography

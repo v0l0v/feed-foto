@@ -38,11 +38,13 @@ jobs:
       - name: Generar digest diario (prioridad máxima)
         env:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
         run: python3 daily_digest.py
 
       - name: Actualizar datos estáticos (caches de artículos)
         env:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
         run: python3 update_static_data.py --keep-lomo
 
       - name: Commit y push de digests
