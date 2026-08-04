@@ -542,6 +542,21 @@ function podcastCardHTML() {
   return '';
 }
 
+function getSourceLabel(src) {
+  switch (src) {
+    case 'colossal':    return 'Colossal · Fotografía';
+    case 'lomography':  return 'Lomography Magazine';
+    case 'booooooom':   return 'Booooooom';
+    case 'tpj':         return 'The Photographic Journal';
+    case 'swan':        return 'Swann Galleries';
+    case 'huck':        return 'Huck Magazine';
+    case 'lensculture': return 'LensCulture';
+    case 'odlp':        return "L'Œil de la Photographie";
+    case 'magnum':      return 'Magnum Photos';
+    default:            return src;
+  }
+}
+
 function render(entries) {
   const el = document.getElementById('entries');
   el.innerHTML = podcastCardHTML() + entries.slice(0, 100).map(e => {
@@ -1489,4 +1504,50 @@ function sortSourcesUI() {
   });
   
   rows.forEach(row => panel.appendChild(row));
+}
+
+function playPodcastInBar(entry) {
+  const bar = document.getElementById('podcast-player-bar');
+  if (!bar) return;
+
+  const imgEl  = document.getElementById('bar-img');
+  const titleEl = document.getElementById('bar-title');
+  const playerEl = document.getElementById('bar-player');
+
+  if (imgEl) imgEl.src = entry.image || PODCAST_COVER;
+  if (titleEl) titleEl.textContent = entry.title;
+
+  if (playerEl) {
+    // Stop and clear any previous audio
+    if (playerEl._audio) {
+      playerEl._audio.pause();
+      playerEl._audio = null;
+    }
+    playerEl.dataset.url = entry.link;
+    const fill = playerEl.querySelector('.podcast-progress-fill');
+    if (fill) fill.style.width = '0%';
+    const time = playerEl.querySelector('.podcast-time');
+    if (time) time.textContent = '0:00 / ' + (entry.duration ? fmtDur(entry.duration) : '--:--');
+    const playBtn = playerEl.querySelector('.podcast-play');
+    if (playBtn) playBtn.textContent = '▶';
+  }
+
+  bar.classList.remove('hide');
+
+  // Autoplay after a short delay
+  setTimeout(() => {
+    const playBtn = document.querySelector('#bar-player .podcast-play');
+    if (playBtn) playBtn.click();
+  }, 200);
+}
+
+function closePlayerBar() {
+  const bar = document.getElementById('podcast-player-bar');
+  if (!bar) return;
+  const playerEl = document.getElementById('bar-player');
+  if (playerEl && playerEl._audio) {
+    playerEl._audio.pause();
+    playerEl._audio = null;
+  }
+  bar.classList.add('hide');
 }
