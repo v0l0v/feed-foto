@@ -24,46 +24,39 @@ const PODCAST_COVER = 'podcast-cover.png';
 let __podcast = null;
 
 function initPodcastPlayers() {
-  const entry = document.getElementById('entries');
-  if (!entry) return;
-
-  entry.addEventListener('click', (e) => {
+  document.body.addEventListener('click', (e) => {
     const btn = e.target.closest('.podcast-play');
-    if (!btn) return;
-    const player = btn.closest('.podcast-player');
-    if (!player) return;
-    const url = player.dataset.url;
-    let audio = player._audio;
-    if (!audio) {
-      audio = new Audio(url);
-      audio.preload = 'none';
-      player._audio = audio;
-      audio.addEventListener('timeupdate', () => updatePodcastProgress(player, audio));
-      audio.addEventListener('loadedmetadata', () => updatePodcastProgress(player, audio));
-      audio.addEventListener('ended', () => {
+    if (btn) {
+      const player = btn.closest('.podcast-player');
+      if (!player) return;
+      const url = player.dataset.url;
+      let audio = player._audio;
+      if (!audio) {
+        audio = new Audio(url);
+        audio.preload = 'none';
+        player._audio = audio;
+        audio.addEventListener('timeupdate', () => updatePodcastProgress(player, audio));
+        audio.addEventListener('loadedmetadata', () => updatePodcastProgress(player, audio));
+        audio.addEventListener('ended', () => {
+          btn.textContent = '▶';
+          const fill = player.querySelector('.podcast-progress-fill');
+          if (fill) fill.style.width = '0%';
+          const time = player.querySelector('.podcast-time');
+          if (time) time.textContent = '0:00 / ' + (audio.duration ? fmtDur(Math.floor(audio.duration)) : '--:--');
+        });
+      }
+      if (audio.paused) {
+        document.querySelectorAll('audio').forEach(a => { if (a !== audio) a.pause(); });
+        document.querySelectorAll('.podcast-play').forEach(b => { if (b !== btn) b.textContent = '▶'; });
+        audio.play().catch(() => {});
+        btn.textContent = '⏸';
+      } else {
+        audio.pause();
         btn.textContent = '▶';
-        const fill = player.querySelector('.podcast-progress-fill');
-        if (fill) fill.style.width = '0%';
-        const time = player.querySelector('.podcast-time');
-        if (time) time.textContent = '0:00 / ' + (audio.duration ? fmtDur(Math.floor(audio.duration)) : '--:--');
-      });
-    }
-    if (audio.paused) {
-      audio.play().catch(() => {});
-      btn.textContent = '⏸';
-    } else {
-      audio.pause();
-      btn.textContent = '▶';
-    }
-  });
-
-  entry.addEventListener('input', (e) => {
-    const vol = e.target.closest('.podcast-volume');
-    if (vol) {
-      const player = vol.closest('.podcast-player');
-      if (player && player._audio) player._audio.volume = parseFloat(vol.value);
+      }
       return;
     }
+
     const bar = e.target.closest('.podcast-progress');
     if (bar) {
       const player = bar.closest('.podcast-player');
@@ -71,6 +64,14 @@ function initPodcastPlayers() {
       const rect = bar.getBoundingClientRect();
       const pct = (e.clientX - rect.left) / rect.width;
       player._audio.currentTime = pct * player._audio.duration;
+    }
+  });
+
+  document.body.addEventListener('input', (e) => {
+    const vol = e.target.closest('.podcast-volume');
+    if (vol) {
+      const player = vol.closest('.podcast-player');
+      if (player && player._audio) player._audio.volume = parseFloat(vol.value);
     }
   });
 }
@@ -176,7 +177,14 @@ function saveSources() {
 
 async function loadFeeds() {
   const [colossal, lomo, boom, tpj, swan, huck, lensculture, odlp, magnum] = await Promise.all([fetchColossal(), fetchLomography(), fetchBooooooom(), fetchTpj(), fetchSwan(), fetchHuck(), fetchLensCulture(), fetchOdlp(), fetchMagnum()]);
-  window.__allEntries = [...colossal, ...lomo, ...boom, ...tpj, ...swan, ...huck, ...lensculture, ...odlp, ...magnum].sort((a, b) => (b._parsedDate || 0) - (a._parsedDate || 0));
+  window.__rawEntries = [...colossal, ...lomo, ...boom, ...tpj, ...swan, ...huck, ...lensculture, ...odlp, ...magnum];
+  combineAndSortAllEntries();
+}
+
+function combineAndSortAllEntries() {
+  const raw = window.__rawEntries || [];
+  const podcasts = window.__podcastEntries || [];
+  window.__allEntries = [...raw, ...podcasts].sort((a, b) => (b._parsedDate || 0) - (a._parsedDate || 0));
   if (!window.__allEntries.length) { showEmpty(); return; }
   applyFilter();
 }
@@ -195,7 +203,25 @@ async function fetchPodcastMeta() {
     if (!Array.isArray(data) || !data.length) return;
     const sorted = [...data].sort((a, b) => String(a.date).localeCompare(String(b.date)));
     __podcast = { ...sorted[sorted.length - 1], num: sorted.length };
-    applyFilter();
+    
+    window.__podcastEntries = sorted.slice(0, -1).map((e, idx) => {
+      const num = idx + 1;
+      return {
+        _source: 'podcast',
+        _id: 'podcast-' + e.date,
+        _parsedDate: new Date(e.date + 'T00:00:00'),
+        date: e.date,
+        title: `Episodio ${num} · ${e.podcast_title || 'Resumen Diario'}`,
+        num: num,
+        duration: e.duration,
+        images: e.images || [],
+        image: e.image || PODCAST_COVER,
+        link: `${PODCAST_RELEASE}/podcast-${e.date}.mp3`,
+        is_podcast_entry: true
+      };
+    });
+    
+    combineAndSortAllEntries();
   } catch {}
 }
 
@@ -539,7 +565,11 @@ function podcastCardHTML() {
 function render(entries) {
   const el = document.getElementById('entries');
   el.innerHTML = podcastCardHTML() + entries.slice(0, 100).map(e => {
-    const src = extractImg(e);
+    const isPodcast = e.is_podcast_entry;
+    const src = isPodcast ? e.image : extractImg(e);
+    const sourceLabel = isPodcast ? 'Podcast · Punto de vista' : (e._source === 'lomography' ? 'Lomography Magazine' : e._source === 'booooooom' ? 'Booooooom' : e._source === 'tpj' ? 'The Photographic Journal' : e._source === 'swan' ? 'Swann Galleries' : e._source === 'huck' ? 'Huck Magazine' : e._source === 'lensculture' ? 'LensCulture' : e._source === 'odlp' ? "L'Œil de la Photographie" : e._source === 'magnum' ? 'Magnum Photos' : 'Colossal · Fotografía');
+    const linkHref = isPodcast ? '#' : e.link;
+    const clickHandler = isPodcast ? 'event.preventDefault()' : 'event.stopPropagation()';
     return `<div class="card" data-color="?" data-id="${e._id}" data-source="${e._source}" onclick="openModal(this)">
       <div class="card-inner">
         <div class="card-skeleton"></div>
@@ -547,8 +577,8 @@ function render(entries) {
         <div class="card-overlay"></div>
       </div>
       <div class="card-info">
-        <div class="card-source">${e._source === 'lomography' ? 'Lomography Magazine' : e._source === 'booooooom' ? 'Booooooom' : e._source === 'tpj' ? 'The Photographic Journal' : e._source === 'swan' ? 'Swann Galleries' : e._source === 'huck' ? 'Huck Magazine' : e._source === 'lensculture' ? 'LensCulture' : e._source === 'odlp' ? "L'Œil de la Photographie" : e._source === 'magnum' ? 'Magnum Photos' : 'Colossal · Fotografía'}</div>
-        <div class="card-title"><a href="${e.link}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${e.title}</a></div>
+        <div class="card-source">${sourceLabel}</div>
+        <div class="card-title"><a href="${linkHref}" target="_blank" rel="noopener" onclick="${clickHandler}">${e.title}</a></div>
         <div class="card-meta">
           <span class="card-date">${e._parsedDate ? fmtDate(e._parsedDate) : ''}</span>
         </div>
@@ -975,6 +1005,39 @@ async function openModal(card) {
   const body = document.getElementById('modal-body');
   body.innerHTML = '<div class="modal-loading">cargando…</div>';
   document.getElementById('modal').classList.remove('hide');
+
+  if (source === 'podcast') {
+    const entry = window.__allEntries?.find(e => e._id === id);
+    if (!entry) { body.innerHTML = '<p class="modal-error">error</p>'; return; }
+    const dur = fmtDur(entry.duration);
+    const img = entry.image || PODCAST_COVER;
+    body.innerHTML = `
+      <div class="modal-tools">
+        <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>
+      </div>
+      <div class="modal-title-group" style="text-align:center">
+        <h2 class="modal-title">${entry.title}</h2>
+        <div class="modal-meta">
+          <span class="modal-source">Podcast · Punto de vista</span>
+          ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
+        </div>
+      </div>
+      <div class="modal-article" style="display:flex; flex-direction:column; align-items:center; gap:2rem; padding:2rem 0">
+        <div class="podcast-art" style="width:250px; height:250px; border-radius:8px; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,0.4)">
+          <img src="${img}" style="width:100%; height:100%; object-fit:cover">
+        </div>
+        <div class="podcast-player" data-url="${entry.link}" style="width:100%; max-width:500px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1.2rem; display:flex; flex-direction:column; align-items:center">
+          <button class="podcast-play" aria-label="Reproducir" style="background:#ff0100; border:none; color:#fff; width:45px; height:45px; border-radius:50%; font-size:1.1rem; cursor:pointer; margin-bottom:1rem; transition:transform 0.1s" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">▶</button>
+          <div class="podcast-progress" style="background:rgba(255,255,255,0.1); width:100%; height:4px; border-radius:2px; cursor:pointer; position:relative; margin-bottom:0.8rem"><div class="podcast-progress-fill" style="background:#ff0100; width:0%; height:100%; border-radius:2px"></div></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; width:100%">
+            <span class="podcast-time" style="font-size:0.75rem; color:rgba(255,255,255,0.5)">0:00 / ${dur || '--:--'}</span>
+            <input type="range" class="podcast-volume" min="0" max="1" step="0.05" value="1" aria-label="Volumen" style="width:70px">
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
 
   if (source === 'lomography') {
     const entry = window.__allEntries?.find(e => e._id === id);
