@@ -8,13 +8,14 @@ const TPJ_FEEDS = [
   'https://thephotographicjournal.com/features/feed',
 ];
 const HUCK_FEEDS = ['https://www.huckmag.com/topic/photography/feed'];
+const LENSCULTURE_FEEDS = ['https://www.lensculture.com/feeds/feed.rss'];
 
 const RSS_PROXIES = [
   u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
   u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
 ];
 const REFRESH_MS = 10 * 60 * 1000;
-const ALL_SOURCES = ['colossal', 'lomography', 'booooooom', 'tpj', 'swan', 'huck'];
+const ALL_SOURCES = ['colossal', 'lomography', 'booooooom', 'tpj', 'swan', 'huck', 'lensculture'];
 const SOURCES_KEY = 'feedfoto.sources';
 const PODCAST_RELEASE = 'https://github.com/v0l0v/puntodevista/releases/download/episodios';
 const PODCAST_COVER = 'podcast-cover.png';
@@ -131,8 +132,8 @@ function saveSources() {
 }
 
 async function loadFeeds() {
-  const [colossal, lomo, boom, tpj, swan, huck] = await Promise.all([fetchColossal(), fetchLomography(), fetchBooooooom(), fetchTpj(), fetchSwan(), fetchHuck()]);
-  window.__allEntries = [...colossal, ...lomo, ...boom, ...tpj, ...swan, ...huck].sort((a, b) => (b._parsedDate || 0) - (a._parsedDate || 0));
+  const [colossal, lomo, boom, tpj, swan, huck, lensculture] = await Promise.all([fetchColossal(), fetchLomography(), fetchBooooooom(), fetchTpj(), fetchSwan(), fetchHuck(), fetchLensCulture()]);
+  window.__allEntries = [...colossal, ...lomo, ...boom, ...tpj, ...swan, ...huck, ...lensculture].sort((a, b) => (b._parsedDate || 0) - (a._parsedDate || 0));
   if (!window.__allEntries.length) { showEmpty(); return; }
   applyFilter();
 }
@@ -349,6 +350,27 @@ function normalizeHuck(items) {
   }));
 }
 
+async function fetchLensCulture() {
+  const [live, fallback] = await Promise.all([
+    fetchRssLive('lensculture', LENSCULTURE_FEEDS),
+    fetchApiOrJson('/api/lensculture', 'lensculture.json', normalizeLensCulture),
+  ]);
+  if (live && live.length) return enrichContent(live, fallback);
+  return fallback;
+}
+
+function normalizeLensCulture(items) {
+  return items.map(i => ({
+    _source: 'lensculture',
+    _id: i.link || i._id,
+    _parsedDate: (i.date || i._parsedDate) ? new Date(i.date || i._parsedDate) : null,
+    link: i.link,
+    title: i.title,
+    content: i.content || i.excerpt,
+    thumbnail: i.thumbnail
+  }));
+}
+
 function extractImg(post) {
   if (post.thumbnail) return post.thumbnail;
   const m = (post.content || '').match(/<img[^>]+src=["']([^"']+)["']/);
@@ -433,7 +455,7 @@ function render(entries) {
         <div class="card-overlay"></div>
       </div>
       <div class="card-info">
-        <div class="card-source">${e._source === 'lomography' ? 'Lomography Magazine' : e._source === 'booooooom' ? 'Booooooom' : e._source === 'tpj' ? 'The Photographic Journal' : e._source === 'swan' ? 'Swann Galleries' : e._source === 'huck' ? 'Huck Magazine' : 'Colossal · Fotografía'}</div>
+        <div class="card-source">${e._source === 'lomography' ? 'Lomography Magazine' : e._source === 'booooooom' ? 'Booooooom' : e._source === 'tpj' ? 'The Photographic Journal' : e._source === 'swan' ? 'Swann Galleries' : e._source === 'huck' ? 'Huck Magazine' : e._source === 'lensculture' ? 'LensCulture' : 'Colossal · Fotografía'}</div>
         <div class="card-title"><a href="${e.link}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${e.title}</a></div>
         <div class="card-meta">
           <span class="card-date">${e._parsedDate ? fmtDate(e._parsedDate) : ''}</span>
@@ -448,13 +470,15 @@ function render(entries) {
   const boom = entries.slice(0, 100).filter(e => e._source === 'booooooom').length;
   const tpj = entries.slice(0, 100).filter(e => e._source === 'tpj').length;
   const swan = entries.slice(0, 100).filter(e => e._source === 'swan').length;
-  const huck = total - colossal - lomo - boom - tpj - swan;
+  const huck = entries.slice(0, 100).filter(e => e._source === 'huck').length;
+  const lensculture = total - colossal - lomo - boom - tpj - swan - huck;
   document.getElementById('count-colossal').textContent = String(colossal);
   document.getElementById('count-lomography').textContent = String(lomo);
   document.getElementById('count-booooooom').textContent = String(boom);
   document.getElementById('count-tpj').textContent = String(tpj);
   document.getElementById('count-swan').textContent = String(swan);
   document.getElementById('count-huck').textContent = String(huck);
+  document.getElementById('count-lensculture').textContent = String(lensculture);
   document.getElementById('count-all').textContent = String(total);
   document.getElementById('footer-info').textContent = total + ' fotografías';
   document.getElementById('empty').classList.toggle('hide', entries.length > 0);
@@ -640,6 +664,34 @@ function renderLomoArticle(body, entry, data) {
     <div class="modal-article">
       <div class="modal-article-content">${data.content}</div>
       ${creditsHTML}
+      <div class="modal-footer" style="padding-top:2rem">
+        <a href="${entry.link}" target="_blank" rel="noopener" class="modal-link-tag">Ver original →</a>
+      </div>
+    </div>
+  `;
+  body.dataset.lomoImages = JSON.stringify(images.map(i => ({ url: i.url, caption: i.alt || '' })));
+}
+
+function renderLensCultureArticle(body, entry, data) {
+  const images = data.images || [];
+  const socialLinks = data.content ? extractSocialLinks(data.content) : [];
+  const linksHTML = socialLinks.length ? '<div class="modal-links">' + socialLinks.map(l => '<a href="' + l.url + '" target="_blank" rel="noopener" class="modal-link-tag link-' + l.platform + '">' + l.text + '</a>').join('') + '</div>' : '';
+  body.innerHTML = `
+    <div class="modal-tools">
+      ${images.length ? `<button class="modal-tool-btn" onclick="openGallery()">Galería (${images.length})</button>` : ''}
+      <button class="modal-tool-btn" onclick="toggleFullscreen()">Pantalla completa</button>
+      <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>
+    </div>
+    ${linksHTML}
+    <div class="modal-title-group">
+      <h2 class="modal-title">${entry.title}</h2>
+      <div class="modal-meta">
+        <span class="modal-source">LensCulture</span>
+        ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
+      </div>
+    </div>
+    <div class="modal-article">
+      <div class="modal-article-content">${data.content}</div>
       <div class="modal-footer" style="padding-top:2rem">
         <a href="${entry.link}" target="_blank" rel="noopener" class="modal-link-tag">Ver original →</a>
       </div>
@@ -908,6 +960,48 @@ async function openModal(card) {
     const entry = window.__allEntries?.find(e => e._id === id);
     if (!entry) { body.innerHTML = '<p class="modal-error">error</p>'; return; }
     renderHuckArticle(body, entry);
+    return;
+  }
+
+  if (source === 'lensculture') {
+    const entry = window.__allEntries?.find(e => e._id === id);
+    if (!entry) { body.innerHTML = '<p class="modal-error">error</p>'; return; }
+    let data = null;
+    try {
+      const resp = await fetch(`/api/lensculture/article?url=${encodeURIComponent(entry.link)}`);
+      const d = await resp.json();
+      if (d.status === 'ok') data = d;
+    } catch {}
+    if (!data) {
+      try {
+        const resp = await fetch('lensculture_articles.json');
+        const cache = await resp.json();
+        const cached = (cache.articles || cache)[entry.link];
+        if (cached && cached.status === 'ok') data = cached;
+      } catch {}
+    }
+    if (data) {
+      renderLensCultureArticle(body, entry, data);
+    } else {
+      body.innerHTML = `
+        <div class="modal-tools">
+          <button class="modal-tool-btn" onclick="closeModal()" style="margin-left:auto">← Volver</button>
+        </div>
+        <div class="modal-title-group">
+          <h2 class="modal-title">${entry.title}</h2>
+          <div class="modal-meta">
+            <span class="modal-source">LensCulture</span>
+            ${entry._parsedDate ? '<span class="modal-sep">·</span><span class="modal-date">' + fmtDate(entry._parsedDate) + '</span>' : ''}
+          </div>
+        </div>
+        <div class="modal-article">
+          <p class="modal-error">no se pudo cargar el contenido desde este servidor</p>
+          <div class="modal-footer" style="padding-top:2rem">
+            <a href="${entry.link}" target="_blank" rel="noopener" class="modal-link-tag">Ver original →</a>
+          </div>
+        </div>
+      `;
+    }
     return;
   }
 

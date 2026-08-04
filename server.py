@@ -186,6 +186,53 @@ def scrape_lomography():
     CACHE['time'] = now
     return articles
 
+LENSCULTURE_CACHE = {'data': None, 'time': 0, 'ttl': 120}
+
+def scrape_lensculture():
+    now = time.time()
+    if LENSCULTURE_CACHE['data'] and now - LENSCULTURE_CACHE['time'] < LENSCULTURE_CACHE['ttl']:
+        return LENSCULTURE_CACHE['data']
+    url = 'https://www.lensculture.com/feeds/feed.rss'
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            xml_data = resp.read()
+        import xml.etree.ElementTree as ET
+        from html import unescape
+        from datetime import datetime
+        root = ET.fromstring(xml_data.lstrip())
+        articles = []
+        for item in root.iter('item'):
+            title = ''
+            link = ''
+            pub_date = ''
+            title_el = item.find('title')
+            if title_el is not None and title_el.text:
+                title = unescape(title_el.text.strip())
+            link_el = item.find('link')
+            if link_el is not None and link_el.text:
+                link = link_el.text.strip()
+            pub_el = item.find('pubDate')
+            if pub_el is not None and pub_el.text:
+                try:
+                    dt = datetime.strptime(pub_el.text.strip()[:25].strip(), '%a, %d %b %Y %H:%M:%S')
+                    pub_date = dt.strftime('%Y-%m-%d')
+                except Exception:
+                    pub_date = ''
+            articles.append({
+                '_source': 'lensculture',
+                'title': title,
+                'link': link,
+                'date': pub_date,
+                'excerpt': ''
+            })
+        LENSCULTURE_CACHE['data'] = articles
+        LENSCULTURE_CACHE['time'] = now
+        return articles
+    except Exception as e:
+        print('Error scrape_lensculture:', e)
+        return []
+
 def inline_to_html(text):
     urls = []
 
@@ -411,6 +458,44 @@ def scrape_lomography_article(url, resolve_profiles=True):
     return data
 
 
+LENSCULTURE_ARTICLE_CACHE = {}
+
+def scrape_lensculture_article(url):
+    now = time.time()
+    if url in LENSCULTURE_ARTICLE_CACHE and now - LENSCULTURE_ARTICLE_CACHE[url]['time'] < 300:
+        return LENSCULTURE_ARTICLE_CACHE[url]['data']
+    md = firecrawl_scrape(url, timeout=60)
+    if not md:
+        return None
+    
+    m = re.search(r'^#\s+\w+', md, re.MULTILINE)
+    content_md = md[m.start():] if m else md
+    
+    cut = len(content_md)
+    pats = [
+        r'\[(?:Feature|Book review|Interview|Article|Review|Project|Photo essay|Gallery)\s+!\[Image',
+        r'See more articles',
+        r'## Get our weekly newsletter',
+        r'## Get our free newsletter',
+        r'#### Stay connected',
+        r'\[!\[Image \d+:[^\]]*\]\(https://assets\.lensculture\.com/static/'
+    ]
+    for pat in pats:
+        mm = re.search(pat, content_md, re.MULTILINE)
+        if mm and mm.start() < cut:
+            cut = mm.start()
+    content_md = content_md[:cut].strip()
+    content_md = re.sub(r'\[\]\(https://www\.lensculture\.com/articles/[^)]+#\s*\"(?:Share|Tweet|Mail)\"\)', '', content_md)
+    
+    images = [{'url': im.group(2), 'alt': im.group(1)} for im in re.finditer(r'!\[([^\]]*)\]\(([^)]+)\)', content_md)]
+    images = [img for img in images if 'logo' not in img['url'].lower() and 'menu-icon' not in img['url'].lower()]
+    
+    content = md_to_html(content_md)
+    data = {'status': 'ok', 'content': content, 'images': images, 'credits': []}
+    LENSCULTURE_ARTICLE_CACHE[url] = {'data': data, 'time': now}
+    return data
+
+
 SWAN_ARTICLE_CACHE = {}
 SWAN_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -490,6 +575,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 data = json.dumps({'status': 'ok', 'items': articles, 'count': len(articles)})
             except subprocess.TimeoutExpired:
                 data = json.dumps({'status': 'error', 'message': 'timeout scraping lomography'})
+            except Exception as e:
+                data = json.dumps({'status': 'error', 'message': str(e)})
+            self.wfile.write(data.encode())
+        elif parsed.path == '/api/lensculture':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            try:
+                articles = scrape_lensculture()
+                data = json.dumps({'status': 'ok', 'items': articles, 'count': len(articles)})
             except Exception as e:
                 data = json.dumps({'status': 'error', 'message': str(e)})
             self.wfile.write(data.encode())
@@ -582,6 +678,21 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps({'status': 'error', 'message': 'missing url'}).encode())
                 return
             data = scrape_lomography_article(url, resolve_profiles=False)
+            if data is None:
+                self.wfile.write(json.dumps({'status': 'error', 'message': 'error scraping article'}).encode())
+            else:
+                self.wfile.write(json.dumps(data).encode())
+        elif parsed.path == '/api/lensculture/article':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            qs = urllib.parse.parse_qs(parsed.query)
+            url = qs.get('url', [None])[0]
+            if not url:
+                self.wfile.write(json.dumps({'status': 'error', 'message': 'missing url'}).encode())
+                return
+            data = scrape_lensculture_article(url)
             if data is None:
                 self.wfile.write(json.dumps({'status': 'error', 'message': 'error scraping article'}).encode())
             else:

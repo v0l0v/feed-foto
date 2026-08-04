@@ -10,7 +10,9 @@ from datetime import date, datetime
 from pathlib import Path
 from html import unescape
 
-from server import firecrawl_scrape, parse_magazine_list, scrape_lomography_article, scrape_booooooom_article, scrape_swan_article
+from server import (firecrawl_scrape, parse_magazine_list, scrape_lomography_article,
+                    scrape_booooooom_article, scrape_swan_article, scrape_lensculture_article,
+                    scrape_lensculture)
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -30,6 +32,7 @@ TPJ_URLS = [
 ]
 SWAN_URL = 'https://www.swanngalleries.com/news/category/photographs-and-photobooks/feed'
 HUCK_URL = 'https://www.huckmag.com/topic/photography/feed'
+LENSCULTURE_URL = 'https://www.lensculture.com/feeds/feed.rss'
 
 
 def fetch_colossal():
@@ -190,6 +193,10 @@ def fetch_huck():
     return fetch_rss(HUCK_URL, 'huck', include_content=True, fetch_page_fallback=False)
 
 
+def fetch_lensculture():
+    return fetch_rss(LENSCULTURE_URL, 'lensculture')
+
+
 def load_previous_items(filename):
     try:
         with open(os.path.join(DIR, filename)) as f:
@@ -259,6 +266,10 @@ def update_swan_articles(items):
     return update_article_cache('swan_articles.json', items, scrape_swan_article)
 
 
+def update_lensculture_articles(items):
+    return update_article_cache('lensculture_articles.json', items, scrape_lensculture_article)
+
+
 def main():
     parser = argparse.ArgumentParser(description='Genera datos estáticos (feeds + caches de artículos).')
     parser.add_argument('--keep-lomo', action='store_true',
@@ -306,6 +317,12 @@ def main():
         huck = load_previous_items('huck.json')
     print(f'     {len(huck)} artículos')
 
+    print('  6b. LensCulture...')
+    lensculture = fetch_lensculture()
+    if not lensculture:
+        lensculture = load_previous_items('lensculture.json')
+    print(f'     {len(lensculture)} artículos')
+
     print('  7. Lomography articles (cache GitHub Pages)...')
     purge_bad_articles('lomography_articles.json')
     new_articles = update_lomography_articles(lomo)
@@ -327,7 +344,12 @@ def main():
         if isinstance(data, dict) and data.get('thumbnail'):
             item['thumbnail'] = data['thumbnail']
 
-    all_entries = sorted(colossal + lomo + boom + tpj + swan + huck,
+    print('  9b. LensCulture articles (cache GitHub Pages)...')
+    purge_bad_articles('lensculture_articles.json')
+    new_lens_articles = update_lensculture_articles(lensculture[:10])
+    print(f'     {new_lens_articles} nuevos | {len(load_article_cache("lensculture_articles.json"))} en cache')
+
+    all_entries = sorted(colossal + lomo + boom + tpj + swan + huck + lensculture,
                          key=lambda x: x.get('_parsedDate') or x.get('date') or '',
                          reverse=True)
 
@@ -346,16 +368,19 @@ def main():
     with open(os.path.join(DIR, 'huck.json'), 'w') as f:
         json.dump({'items': huck, 'count': len(huck), 'updated': ts}, f)
 
+    with open(os.path.join(DIR, 'lensculture.json'), 'w') as f:
+        json.dump({'items': lensculture, 'count': len(lensculture), 'updated': ts}, f)
+
     with open(os.path.join(DIR, 'feeds.json'), 'w') as f:
         json.dump({'items': all_entries, 'count': len(all_entries), 'updated': ts}, f)
 
-    print(f'  Guardado: lomography.json, booooooom.json, tpj.json, swan.json, huck.json, feeds.json ({len(all_entries)} total)')
+    print(f'  Guardado: lomography.json, booooooom.json, tpj.json, swan.json, huck.json, lensculture.json, feeds.json ({len(all_entries)} total)')
 
     print('  10. Subiendo a GitHub...')
     try:
         result = subprocess.run(
-            ['git', 'add', 'lomography.json', 'booooooom.json', 'tpj.json', 'swan.json', 'huck.json', 'feeds.json',
-             'lomography_articles.json', 'booooooom_articles.json', 'swan_articles.json'],
+            ['git', 'add', 'lomography.json', 'booooooom.json', 'tpj.json', 'swan.json', 'huck.json', 'lensculture.json', 'feeds.json',
+             'lomography_articles.json', 'booooooom_articles.json', 'swan_articles.json', 'lensculture_articles.json'],
             capture_output=True, text=True, cwd=DIR
         )
         result = subprocess.run(
