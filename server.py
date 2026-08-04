@@ -562,7 +562,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if not url:
                 self.wfile.write(json.dumps({'status': 'error', 'message': 'missing url'}).encode())
                 return
-            data = scrape_lomography_article(url)
+            data = scrape_lomography_article(url, resolve_profiles=False)
             if data is None:
                 self.wfile.write(json.dumps({'status': 'error', 'message': 'error scraping article'}).encode())
             else:

@@ -5,7 +5,8 @@ import subprocess
 from datetime import date
 
 from update_static_data import (fetch_colossal, fetch_lomography, fetch_booooooom,
-                                fetch_tpj, fetch_swan, fetch_huck, load_previous_items)
+                                fetch_tpj, fetch_swan, fetch_huck, load_previous_items,
+                                update_lomography_articles, update_booooooom_articles, update_swan_articles)
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -78,10 +79,19 @@ def main():
     save_payload('huck.json', huck, all_entries)
     save_payload('feeds.json', all_entries, all_entries)
 
+    print('  6b. Actualizando cachés de artículos...')
+    if lomo:
+        update_lomography_articles(lomo)
+    if boom:
+        update_booooooom_articles(boom)
+    if swan:
+        update_swan_articles(swan)
+
     print('  7. Subiendo a GitHub...')
     try:
         subprocess.run(
-            ['git', 'add', 'lomography.json', 'booooooom.json', 'tpj.json', 'swan.json', 'huck.json', 'feeds.json'],
+            ['git', 'add', 'lomography.json', 'booooooom.json', 'tpj.json', 'swan.json', 'huck.json', 'feeds.json',
+             'lomography_articles.json', 'booooooom_articles.json', 'swan_articles.json'],
             capture_output=True, text=True, cwd=DIR
         )
         res = subprocess.run(
