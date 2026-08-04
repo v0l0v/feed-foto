@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import re
@@ -116,7 +117,14 @@ def caption_for(item):
 
 
 def main():
-    today = date.today().isoformat()
+    parser = argparse.ArgumentParser(description='Envía noticias nuevas a Telegram.')
+    parser.add_argument('--date', default=date.today().isoformat(),
+                        help='Fecha objetivo (YYYY-MM-DD). Por defecto: hoy.')
+    parser.add_argument('--dry-run', action='store_true',
+                        help='Solo simula: imprime lo que enviaría sin mandar nada.')
+    args = parser.parse_args()
+
+    today = args.date
     if not TG_TOKEN or not TG_CHAT_ID:
         print('  Falta TG_TOKEN o TG_CHAT_ID')
         return
@@ -128,7 +136,7 @@ def main():
 
     today_items = [i for i in items if item_date(i) == today and i.get('link')]
     if not today_items:
-        print(f'  Sin artículos de hoy ({today})')
+        print(f'  Sin artículos de {today}')
         return
 
     sent = load_state()
@@ -136,7 +144,15 @@ def main():
     sent = sent & current_links
 
     new_items = [i for i in today_items if i.get('link') not in sent]
-    print(f'  {len(today_items)} artículos de hoy, {len(new_items)} nuevos')
+    print(f'  {len(today_items)} artículos de {today}, {len(new_items)} nuevos')
+
+    if args.dry_run:
+        for item in new_items:
+            img = get_image(item)
+            print(f'  📋 {item["_source"]}: {(item.get("title") or "")[:70]}')
+            print(f'     img: {img}')
+        print(f'  [dry-run] habría enviado {len(new_items)} mensajes')
+        return
 
     sent_ok = 0
     for item in new_items:
