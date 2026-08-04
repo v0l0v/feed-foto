@@ -141,6 +141,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Podcast button filter trigger
+  document.getElementById('podcast-filter-btn').addEventListener('click', () => {
+    if (__sources.size === 1 && __sources.has('podcast')) {
+      __sources.clear();
+    } else {
+      __sources.clear();
+      __sources.add('podcast');
+    }
+    saveSources();
+    applyFilter();
+  });
+
   loadSources();
   sortSourcesUI();
   loadFeeds();
@@ -447,6 +459,7 @@ function extractImg(post) {
 }
 
 function isSourceVisible(src) {
+  if (__sources.has('podcast')) return false;
   return __sources.size === 0 || __sources.has(src);
 }
 
@@ -458,13 +471,22 @@ function applyFilter() {
   const entries = isMobile() ? window.__allEntries
     : window.__allEntries.filter(e => isSourceVisible(e._source));
   render(entries);
+  
+  const isPodcastOnly = __sources.size === 1 && __sources.has('podcast');
+  document.getElementById('podcast-filter-btn').classList.toggle('active', isPodcastOnly);
   document.getElementById('chk-all').checked = __sources.size === 0;
+  
   ALL_SOURCES.forEach(src => {
     document.querySelector(`.source-row[data-src="${src}"] input`)
       .checked = isSourceVisible(src);
   });
-  document.getElementById('sources-btn-count').textContent =
-    __sources.size === 0 ? 'todas' : `${__sources.size}`;
+  
+  if (isPodcastOnly) {
+    document.getElementById('sources-btn-count').textContent = 'podcast';
+  } else {
+    document.getElementById('sources-btn-count').textContent =
+      __sources.size === 0 ? 'todas' : `${__sources.size}`;
+  }
 }
 
 function esc(s) {
@@ -484,6 +506,7 @@ function fmtDur(sec) {
 
 function podcastCardHTML() {
   if (!__podcast) return '';
+  if (__sources.size > 0 && !__sources.has('podcast')) return '';
   const e = __podcast;
   const title = `Episodio ${e.num} · ${fmtDateLong(new Date(e.date + 'T00:00:00'))}`;
   const url = `${PODCAST_RELEASE}/podcast-${e.date}.mp3`;

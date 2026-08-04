@@ -92,6 +92,11 @@ header {
   border-color: rgba(255,1,0,0.5);
   color: #ff0100;
 }
+.podcast-btn.active {
+  border-color: #ff0100;
+  color: #ff0100;
+  background: rgba(255, 1, 0, 0.08);
+}
 .sources-btn #sources-btn-count {
   opacity: 0.6;
 }
