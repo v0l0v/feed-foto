@@ -180,9 +180,36 @@ header {
 
 .card {
   position: relative;
-  overflow: hidden;
   background: var(--surface);
   aspect-ratio: 4 / 3;
+  cursor: pointer;
+  transition:
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-style: preserve-3d;
+  will-change: transform;
+  --rx: 0deg;
+  --ry: 0deg;
+  --tx: 0px;
+  --ty: 0px;
+}
+
+.card:hover {
+  z-index: 2;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.75),
+    0 10px 30px rgba(0, 0, 0, 0.5),
+    0 0 0 1.5px rgba(255, 1, 0, 0.7),
+    0 0 40px rgba(255, 1, 0, 0.25),
+    inset 0 0 0 1px rgba(255, 1, 0, 0.3);
+}
+
+.card.is-tilting {
+  z-index: 2;
+  transition:
+    box-shadow 0.4s ease,
+    z-index 0s;
+  transform: perspective(800px) rotateX(var(--rx)) rotateY(var(--ry)) translateY(-8px) scale(1.03);
 }
 
 .card.tall { aspect-ratio: 3 / 4; }
@@ -192,6 +219,7 @@ header {
 .card-inner {
   position: absolute;
   inset: 0;
+  overflow: hidden;
 }
 
 .card-image {
@@ -199,14 +227,22 @@ header {
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    transform 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.6s ease;
   opacity: 0;
+  transform-origin: center center;
 }
 
 .card-image.loaded { opacity: 1; }
 
 .card:hover .card-image.loaded {
-  transform: scale(1.05);
+  transform: scale(1.06) translate(calc(var(--tx) * 0.4px), calc(var(--ty) * 0.4px));
+}
+
+.card.is-tilting .card-image.loaded {
+  transform: scale(1.08) translate(calc(var(--tx) * -0.8px), calc(var(--ty) * -0.8px));
+  transition-duration: 0.15s;
 }
 
 .card-overlay {

@@ -1551,3 +1551,116 @@ function closePlayerBar() {
   }
   bar.classList.add('hide');
 }
+
+// ─── Card Tilt / Parallax ─────────────────────────────────────────────────────
+(function initCardTilt() {
+  const MAX_ANGLE = 12; // grados máximos de rotación
+  let rafId = null;
+  let activeCard = null;
+  let targetRx = 0, targetRy = 0, targetTx = 0, targetTy = 0;
+  let currentRx = 0, currentRy = 0, currentTx = 0, currentTy = 0;
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function animate() {
+    if (!activeCard) return;
+
+    const speed = 0.12;
+    currentRx = lerp(currentRx, targetRx, speed);
+    currentRy = lerp(currentRy, targetRy, speed);
+    currentTx = lerp(currentTx, targetTx, speed);
+    currentTy = lerp(currentTy, targetTy, speed);
+
+    activeCard.style.setProperty('--rx', `${currentRx.toFixed(3)}deg`);
+    activeCard.style.setProperty('--ry', `${currentRy.toFixed(3)}deg`);
+    activeCard.style.setProperty('--tx', `${currentTx.toFixed(3)}`);
+    activeCard.style.setProperty('--ty', `${currentTy.toFixed(3)}`);
+
+    rafId = requestAnimationFrame(animate);
+  }
+
+  function resetCard(card) {
+    if (!card) return;
+    targetRx = 0; targetRy = 0; targetTx = 0; targetTy = 0;
+
+    // Esperamos a que el lerp llegue a ~0 y luego quitamos la clase
+    const reset = () => {
+      currentRx = lerp(currentRx, 0, 0.2);
+      currentRy = lerp(currentRy, 0, 0.2);
+      currentTx = lerp(currentTx, 0, 0.2);
+      currentTy = lerp(currentTy, 0, 0.2);
+
+      card.style.setProperty('--rx', `${currentRx.toFixed(3)}deg`);
+      card.style.setProperty('--ry', `${currentRy.toFixed(3)}deg`);
+      card.style.setProperty('--tx', `${currentTx.toFixed(3)}`);
+      card.style.setProperty('--ty', `${currentTy.toFixed(3)}`);
+
+      if (Math.abs(currentRx) > 0.05 || Math.abs(currentRy) > 0.05) {
+        requestAnimationFrame(reset);
+      } else {
+        card.classList.remove('is-tilting');
+        card.style.removeProperty('--rx');
+        card.style.removeProperty('--ry');
+        card.style.removeProperty('--tx');
+        card.style.removeProperty('--ty');
+      }
+    };
+    requestAnimationFrame(reset);
+  }
+
+  // Delegamos en el contenedor para no crear listeners por card
+  const container = document.getElementById('entries');
+  if (!container) return;
+
+  container.addEventListener('mousemove', (e) => {
+    const card = e.target.closest('.card');
+    if (!card) return;
+
+    // Cambiamos de card
+    if (activeCard && activeCard !== card) {
+      resetCard(activeCard);
+      cancelAnimationFrame(rafId);
+    }
+
+    if (activeCard !== card) {
+      activeCard = card;
+      currentRx = 0; currentRy = 0;
+      currentTx = 0; currentTy = 0;
+      card.classList.add('is-tilting');
+      rafId = requestAnimationFrame(animate);
+    }
+
+    const rect = card.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = (e.clientX - cx) / (rect.width / 2);   // -1 … 1
+    const dy = (e.clientY - cy) / (rect.height / 2);  // -1 … 1
+
+    targetRy =  dx * MAX_ANGLE;
+    targetRx = -dy * MAX_ANGLE;
+    targetTx =  dx * 15;  // px para parallax de la imagen
+    targetTy =  dy * 15;
+  }, { passive: true });
+
+  container.addEventListener('mouseleave', (e) => {
+    const leaving = e.target.closest?.('.card');
+    if (!activeCard) return;
+    cancelAnimationFrame(rafId);
+    const cardToReset = activeCard;
+    activeCard = null;
+    resetCard(cardToReset);
+  });
+
+  // También al salir de cada card individualmente
+  container.addEventListener('mouseout', (e) => {
+    const card = e.target.closest('.card');
+    if (!card || activeCard !== card) return;
+    // Chequeamos si el destino está dentro de la misma card
+    if (card.contains(e.relatedTarget)) return;
+    cancelAnimationFrame(rafId);
+    const cardToReset = activeCard;
+    activeCard = null;
+    resetCard(cardToReset);
+  }, { passive: true });
+})();
+// ─────────────────────────────────────────────────────────────────────────────
