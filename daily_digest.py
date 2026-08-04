@@ -5,7 +5,7 @@ import urllib.request
 from datetime import date, datetime
 
 from server import firecrawl_scrape, parse_magazine_list, clean_lomo_credit_name, trim_lomo_body
-from update_static_data import fetch_booooooom, fetch_tpj, fetch_swan, fetch_huck
+from update_static_data import fetch_booooooom, fetch_tpj, fetch_swan, fetch_huck, fetch_lensculture, fetch_odlp
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.join(DIR, 'resumenes')
@@ -19,6 +19,8 @@ SOURCES = [
     ('tpj', 'The Photographic Journal'),
     ('swan', 'Swann Galleries'),
     ('huck', 'Huck Magazine'),
+    ('lensculture', 'LensCulture'),
+    ('odlp', 'L\'Œil de la Photographie'),
 ]
 
 RSS_SOURCES = [
@@ -26,6 +28,8 @@ RSS_SOURCES = [
     ('tpj', 'The Photographic Journal', fetch_tpj),
     ('swan', 'Swann Galleries', fetch_swan),
     ('huck', 'Huck Magazine', fetch_huck),
+    ('lensculture', 'LensCulture', fetch_lensculture),
+    ('odlp', 'L\'Œil de la Photographie', fetch_odlp),
 ]
 
 EMOJI_RE = re.compile(
@@ -390,9 +394,18 @@ def main():
     items_by_source['lomography'] = lomo
     print(f'    {len(lomo)} artículos')
 
-    print('  3. Booooooom, TPJ, Swann, Huck (RSS)...')
+    print('  3. Booooooom, TPJ, Swann, Huck, LensCulture, L\'Œil de la Photographie (RSS)...')
     for key, label, fn in RSS_SOURCES:
         articles = [a for a in fn() if a.get('date') == TODAY.isoformat()]
+        if key == 'odlp':
+            filtered = []
+            for a in articles:
+                t = a.get('title', '').lower()
+                if 'summer is here' in t or "c'est l'été" in t or "c’est l’été" in t:
+                    print(f'    → [Omitido por etiqueta de verano] {a.get("title")[:60]}')
+                    continue
+                filtered.append(a)
+            articles = filtered
         items = [process_rss_item(a, label) for a in articles]
         items_by_source[key] = items
         for item in items:
