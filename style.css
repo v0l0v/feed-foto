@@ -79,10 +79,12 @@ header {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.15s ease;
 }
 .sources-btn:hover {
   background: rgba(255,255,255,0.14);
+  border-color: rgba(255,1,0,0.5);
+  color: #ff0100;
 }
 .podcast-btn {
   display: inline-block;
