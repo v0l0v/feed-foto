@@ -555,7 +555,6 @@ function render(entries) {
   document.getElementById('count-all').textContent = String(total);
   document.getElementById('footer-info').textContent = total + ' fotografías';
   document.getElementById('empty').classList.toggle('hide', entries.length > 0);
-  renderChips();
 }
 
 function fmtDate(d) {
@@ -1449,56 +1448,4 @@ function sortSourcesUI() {
   });
   
   rows.forEach(row => panel.appendChild(row));
-}
-
-function renderChips() {
-  const container = document.getElementById('source-chips');
-  if (!container) return;
-  
-  const counts = getReadCounts();
-  const sortedSources = [...ALL_SOURCES].sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
-  
-  let html = `<div class="chip ${__sources.size === 0 ? 'active' : ''}" data-action="all">Todas <span class="chip-count">${window.__allEntries?.length || 0}</span></div>`;
-  
-  sortedSources.forEach(src => {
-    const count = window.__allEntries?.filter(e => e._source === src).length || 0;
-    const isActive = __sources.has(src);
-    const label = getSourceLabel(src);
-    html += `<div class="chip ${isActive ? 'active' : ''}" data-src="${src}">${label} <span class="chip-count">${count}</span></div>`;
-  });
-  
-  container.innerHTML = html;
-  
-  container.querySelectorAll('.chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const src = chip.dataset.src;
-      if (chip.dataset.action === 'all') {
-        __sources.clear();
-      } else {
-        if (__sources.size === 1 && __sources.has(src)) {
-          __sources.clear();
-        } else {
-          __sources.clear();
-          __sources.add(src);
-        }
-      }
-      saveSources();
-      applyFilter();
-    });
-  });
-}
-
-function getSourceLabel(src) {
-  switch (src) {
-    case 'colossal': return 'Colossal';
-    case 'lomography': return 'Lomography';
-    case 'booooooom': return 'Booooooom';
-    case 'tpj': return 'TPJ';
-    case 'swan': return 'Swann';
-    case 'huck': return 'Huck';
-    case 'lensculture': return 'LensCulture';
-    case 'odlp': return 'L\'Œil';
-    case 'magnum': return 'Magnum';
-    default: return src;
-  }
 }
