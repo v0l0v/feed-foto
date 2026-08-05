@@ -725,6 +725,12 @@ function applyFilter() {
     __allChecked ? 'todas' : (__sources.size === 0 ? 'ninguna' : `${__sources.size}`);
 }
 
+function forceEagerImages() {
+  const body = document.getElementById('modal-body');
+  if (!body) return;
+  body.querySelectorAll('img[loading="lazy"]').forEach(img => img.removeAttribute('loading'));
+}
+
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -1206,6 +1212,7 @@ async function openModal(card) {
   const body = document.getElementById('modal-body');
   body.innerHTML = '<div class="modal-loading">cargando…</div>';
   document.getElementById('modal').classList.remove('hide');
+  setTimeout(forceEagerImages, 0);
 
   if (source === 'podcast') {
     // Don't open modal for podcast cards — open the player bar instead
