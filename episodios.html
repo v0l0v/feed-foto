@@ -96,6 +96,7 @@
 <div id="modal" class="hide" role="dialog" aria-modal="true" aria-label="Resumen del episodio">
   <div id="modal-backdrop"></div>
   <div id="modal-panel">
+    <button class="modal-close" aria-label="Cerrar">✕</button>
     <div id="modal-body"></div>
   </div>
 </div>
@@ -315,7 +316,11 @@ function selectEpisode(card) {
 function openPodcastResumen(e) {
   const body = document.getElementById('modal-body');
   if (!body) return;
-  body.innerHTML = '<div class="modal-title-group"><h2 class="modal-title">' + esc(e.podcast_title || 'Resumen Diario') + '</h2></div>' + (e.description ? fmtDesc(e.description) : '<p style="opacity:0.4">Sin descripción</p>');
+  body.innerHTML =
+    '<div class="modal-podcast-accent"></div>' +
+    '<span class="modal-podcast-badge">Podcast · Punto de vista</span>' +
+    '<div class="modal-title-group"><h2 class="modal-title">' + esc(e.podcast_title || 'Resumen Diario') + '</h2></div>' +
+    '<div class="modal-content">' + (e.description ? fmtDesc(e.description) : '<p style="opacity:0.4">Sin descripción</p>') + '</div>';
   document.getElementById('modal').classList.remove('hide');
 }
 

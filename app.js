@@ -425,7 +425,11 @@ function renderPodcastHero() {
 function openPodcastResumen(e) {
   const body = document.getElementById('modal-body');
   if (!body) return;
-  body.innerHTML = '<div class="modal-title-group"><h2 class="modal-title">' + esc(e.podcast_title || 'Resumen Diario') + '</h2></div>' + (e.description ? fmtDesc(e.description) : '<p style="opacity:0.4">Sin descripción</p>');
+  body.innerHTML =
+    '<div class="modal-podcast-accent"></div>' +
+    '<span class="modal-podcast-badge">Podcast · Punto de vista</span>' +
+    '<div class="modal-title-group"><h2 class="modal-title">' + esc(e.podcast_title || 'Resumen Diario') + '</h2></div>' +
+    '<div class="modal-content">' + (e.description ? fmtDesc(e.description) : '<p style="opacity:0.4">Sin descripción</p>') + '</div>';
   document.getElementById('modal').classList.remove('hide');
 }
 
