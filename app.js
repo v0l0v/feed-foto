@@ -192,31 +192,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ── Fila Podcast (fuente fija, primera e inamovible) ────────────────
-  const podRow = document.querySelector('.source-row[data-src="podcast"]');
-  if (podRow) {
-    podRow.querySelector('input').addEventListener('change', (e) => {
-      __allChecked = false;
-      if (e.target.checked) __sources.add('podcast');
-      else __sources.delete('podcast');
-      saveSources();
-      applyFilter();
-    });
-    podRow.addEventListener('click', (e) => {
-      if (e.target.tagName === 'INPUT') return;
-      e.preventDefault();
-      __allChecked = false;
-      if (__sources.size === 1 && __sources.has('podcast')) {
-        __sources.clear();
-      } else {
-        __sources.clear();
-        __sources.add('podcast');
-      }
-      saveSources();
-      applyFilter();
-    });
-  }
-
   loadSources();
   sortSourcesUI();
   loadFeeds();
@@ -382,8 +357,7 @@ async function loadFeeds() {
 
 function combineAndSortAllEntries() {
   const raw = window.__rawEntries || [];
-  const podcasts = window.__podcastEntries || [];
-  window.__allEntries = [...raw, ...podcasts].sort((a, b) => (b._parsedDate || 0) - (a._parsedDate || 0));
+  window.__allEntries = [...raw].sort((a, b) => (b._parsedDate || 0) - (a._parsedDate || 0));
   if (!window.__allEntries.length) { showEmpty(); return; }
   applyFilter();
 }
@@ -410,6 +384,7 @@ async function fetchPodcastMeta() {
         _parsedDate: new Date(e.date + 'T00:00:00'),
         date: e.date,
         title: `Episodio ${num} · ${e.podcast_title || 'Resumen Diario'}`,
+        podcast_title: e.podcast_title || 'Resumen Diario',
         num: num,
         duration: e.duration,
         images: e.images || [],
@@ -420,7 +395,30 @@ async function fetchPodcastMeta() {
     });
     
     combineAndSortAllEntries();
+    renderPodcastHero();
   } catch {}
+}
+
+function renderPodcastHero() {
+  const hero = document.getElementById('podcast-hero');
+  const entries = window.__podcastEntries || [];
+  if (!hero || !entries.length) return;
+  const latest = entries[entries.length - 1];
+  const img = document.getElementById('podcast-hero-img');
+  if (img) img.src = latest.image || PODCAST_COVER;
+  const title = document.getElementById('podcast-hero-title');
+  if (title) title.textContent = latest.podcast_title;
+  const num = document.getElementById('podcast-hero-num');
+  if (num) num.textContent = 'episodio ' + latest.num;
+  const date = document.getElementById('podcast-hero-date');
+  if (date) date.textContent = fmtDate(new Date(latest.date + 'T00:00:00'));
+  const player = document.getElementById('podcast-hero-player');
+  if (player) {
+    player.dataset.url = latest.link;
+    const time = player.querySelector('.podcast-time');
+    if (time) time.textContent = '0:00 / ' + (latest.duration ? fmtDur(latest.duration) : '--:--');
+  }
+  hero.classList.remove('hide');
 }
 
 async function fetchColossal() {
@@ -703,8 +701,6 @@ function applyFilter() {
     document.querySelector(`.source-row[data-src="${src}"] input`)
       .checked = isSourceVisible(src);
   });
-  const podChk = document.querySelector('.source-row[data-src="podcast"] input');
-  if (podChk) podChk.checked = isSourceVisible('podcast');
 
   document.getElementById('sources-btn-count').textContent =
     __allChecked ? 'todas' : (__sources.size === 0 ? 'ninguna' : `${__sources.size}`);
@@ -776,8 +772,7 @@ function render(entries) {
   const huck = entries.slice(0, 100).filter(e => e._source === 'huck').length;
   const lensculture = entries.slice(0, 100).filter(e => e._source === 'lensculture').length;
   const odlp = entries.slice(0, 100).filter(e => e._source === 'odlp').length;
-  const pod = entries.slice(0, 100).filter(e => e.is_podcast_entry).length;
-  const magnum = total - colossal - lomo - boom - tpj - swan - huck - lensculture - odlp - pod;
+  const magnum = total - colossal - lomo - boom - tpj - swan - huck - lensculture - odlp;
   document.getElementById('count-colossal').textContent = String(colossal);
   document.getElementById('count-lomography').textContent = String(lomo);
   document.getElementById('count-booooooom').textContent = String(boom);
@@ -787,7 +782,6 @@ function render(entries) {
   document.getElementById('count-lensculture').textContent = String(lensculture);
   document.getElementById('count-odlp').textContent = String(odlp);
   document.getElementById('count-magnum').textContent = String(magnum);
-  document.getElementById('count-podcast').textContent = String(pod);
   document.getElementById('count-all').textContent = String(total);
   document.getElementById('footer-info').textContent = total + ' fotografías';
   const showEmpty = entries.length === 0;
@@ -1682,7 +1676,7 @@ function sortSourcesUI() {
   const panel = document.getElementById('sources-panel');
   if (!panel) return;
   const counts = getReadCounts();
-  const rows = Array.from(panel.querySelectorAll('.source-row:not(.all):not([data-src="podcast"])'));
+  const rows = Array.from(panel.querySelectorAll('.source-row:not(.all)'));
   
   rows.sort((a, b) => {
     const srcA = a.dataset.src;

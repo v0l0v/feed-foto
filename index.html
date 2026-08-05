@@ -38,7 +38,6 @@
       <span>Todas</span>
       <span class="src-count" id="count-all">0</span>
     </label>
-    <label class="source-row" data-src="podcast"><input type="checkbox" data-src="podcast"><span>Punto de vista Podcast</span><span class="src-count" id="count-podcast">0</span></label>
     <label class="source-row" data-src="colossal"><input type="checkbox" data-src="colossal"><span>Colossal</span><span class="src-count" id="count-colossal">0</span></label>
     <label class="source-row" data-src="lomography"><input type="checkbox" data-src="lomography"><span>Lomography</span><span class="src-count" id="count-lomography">0</span></label>
     <label class="source-row" data-src="booooooom"><input type="checkbox" data-src="booooooom"><span>Booooooom</span><span class="src-count" id="count-booooooom">0</span></label>
@@ -53,6 +52,28 @@
 
 <div id="loader"><span style="color:#ff0100">●</span> cargando feed…</div>
 <div id="empty" class="hide">sin entradas</div>
+
+<div id="podcast-hero" class="hide" aria-label="Podcast del día">
+  <div class="podcast-hero-inner">
+    <img id="podcast-hero-img" src="podcast-cover.png" alt="Punto de vista — podcast">
+    <div class="podcast-hero-body">
+      <span class="podcast-hero-badge"><span class="podcast-dot"></span> Podcast · Punto de vista</span>
+      <h2 id="podcast-hero-title"></h2>
+      <div class="podcast-hero-meta">
+        <span id="podcast-hero-num"></span>
+        <span id="podcast-hero-date"></span>
+        <a href="episodios.html">todos los episodios →</a>
+      </div>
+    </div>
+    <div class="podcast-player" id="podcast-hero-player" data-url="">
+      <button class="podcast-play" aria-label="Reproducir">▶</button>
+      <div class="podcast-progress"><div class="podcast-progress-fill"></div></div>
+      <span class="podcast-time">0:00 / --:--</span>
+      <input type="range" class="podcast-volume" min="0" max="1" step="0.05" value="1" aria-label="Volumen">
+    </div>
+  </div>
+</div>
+
 <main id="entries"></main>
 
 <div id="modal" class="hide" role="dialog" aria-modal="true" aria-label="Detalle del artículo">
