@@ -36,23 +36,6 @@
       0 0 35px rgba(255, 1, 0, 0.35);
   }
 
-  .ep-readmore {
-    margin-left: auto;
-    pointer-events: auto;
-    height: 30px;
-    padding: 0 0.9rem;
-    background: #d0d0d0;
-    color: #000;
-    border: none;
-    border-radius: 2px;
-    font-size: 0.55rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: background 0.2s, color 0.2s;
-  }
-  .ep-readmore:hover { background: #ff0100; color: #fff; }
-
   .ep-empty { grid-column: 1 / -1; text-align: center; color: rgba(240,236,228,0.4); padding: 4rem 0; }
 
   #loader { max-width: 1600px; margin: 2rem auto; padding: 0 2rem; }
@@ -108,13 +91,6 @@
 <div id="loader"><span style="color:#ff0100">●</span> cargando episodios…</div>
 <main id="episodes"></main>
 
-<div id="modal" class="hide" role="dialog" aria-modal="true" aria-label="Resumen del episodio">
-  <div id="modal-backdrop"></div>
-  <div id="modal-panel">
-    <div id="modal-body"></div>
-  </div>
-</div>
-
 <footer>
   <a href="index.html">punto de vista</a>
   <span>podcast diario</span>
@@ -135,21 +111,10 @@ function fmtDur(s) {
   return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 }
 
-function splitItems(desc) {
-  if (!desc) return [];
-  return desc.split(/\n{2,}|(?=\*\*)/).map(s => s.trim()).filter(Boolean);
-}
-
 function esc(s) {
   return String(s || '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
-function fmtDesc(desc) {
-  const items = splitItems(desc);
-  if (items.length <= 1) return esc(desc);
-  return items.map(i => '<p style="margin:0 0 0.6rem">' + esc(i) + '</p>').join('');
 }
 
 function epImgLoaded(img) {
@@ -294,30 +259,8 @@ function selectEpisode(card) {
   document.getElementById('podcast-hero').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function openResumen(card) {
-  const e = episodes.find(x => String(x.date) === card.dataset.id);
-  if (!e) return;
-  const num = episodes.length - episodes.indexOf(e);
-  document.getElementById('modal-body').innerHTML =
-    '<div class="modal-title-group">' +
-    '<span style="font-size:0.7rem;letter-spacing:0.14em;text-transform:uppercase;color:#ff0100">Episodio ' + num + ' · ' + fmtFecha(e.date) + '</span>' +
-    '<h2 class="modal-title">' + esc(e.podcast_title || 'Resumen diario') + '</h2>' +
-    '</div>' + fmtDesc(e.description);
-  document.getElementById('modal').classList.remove('hide');
-}
-
-function closeModal() {
-  document.getElementById('modal').classList.add('hide');
-}
-
 function bindRadio(root) {
   root.addEventListener('click', (e) => {
-    const rm = e.target.closest('.ep-readmore');
-    if (rm) {
-      const card = rm.closest('.episode');
-      if (card) openResumen(card);
-      return;
-    }
     const play = e.target.closest('.podcast-play');
     if (play) {
       if (current) {
@@ -343,10 +286,7 @@ function bindRadio(root) {
       e.preventDefault();
       selectEpisode(e.target);
     }
-    if (e.key === 'Escape') closeModal();
   });
-
-  document.getElementById('modal-backdrop').addEventListener('click', closeModal);
 
   root.addEventListener('input', (e) => {
     const vol = e.target.closest('.podcast-volume');
@@ -389,7 +329,6 @@ function renderEpisodes(meta) {
         <div class="card-title">${esc(title)}</div>
         <div class="card-meta">
           <span class="card-date">${fmtDur(e.duration)}</span>
-          <button class="ep-readmore" type="button" aria-haspopup="dialog">ver resumen</button>
         </div>
       </div>
     </div>`;
