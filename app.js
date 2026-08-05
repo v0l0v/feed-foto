@@ -155,14 +155,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('source-all-row').addEventListener('click', (e) => {
     if (e.target.tagName === 'INPUT') return;
     e.preventDefault();
+    __allChecked = !__allChecked;
     __sources.clear();
     saveSources();
     applyFilter();
   });
 
   document.getElementById('chk-all').addEventListener('change', (e) => {
-    if (e.target.checked) __sources.clear();
-    else __sources = new Set(ALL_SOURCES);
+    __allChecked = e.target.checked;
+    __sources.clear();
     saveSources();
     applyFilter();
   });
@@ -170,6 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
   ALL_SOURCES.forEach(src => {
     const row = document.querySelector(`.source-row[data-src="${src}"]`);
     row.querySelector('input').addEventListener('change', (e) => {
+      __allChecked = false;
       if (e.target.checked) __sources.add(src);
       else __sources.delete(src);
       saveSources();
@@ -178,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
     row.addEventListener('click', (e) => {
       if (e.target.tagName === 'INPUT') return;
       e.preventDefault();
+      __allChecked = false;
       if (__sources.size === 1 && __sources.has(src)) {
         __sources.clear();
       } else {
@@ -193,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const podRow = document.querySelector('.source-row[data-src="podcast"]');
   if (podRow) {
     podRow.querySelector('input').addEventListener('change', (e) => {
+      __allChecked = false;
       if (e.target.checked) __sources.add('podcast');
       else __sources.delete('podcast');
       saveSources();
@@ -201,6 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
     podRow.addEventListener('click', (e) => {
       if (e.target.tagName === 'INPUT') return;
       e.preventDefault();
+      __allChecked = false;
       if (__sources.size === 1 && __sources.has('podcast')) {
         __sources.clear();
       } else {
@@ -347,17 +352,19 @@ function buildMonthsGrid() {
 }
 
 
+let __allChecked = true;
 let __sources = new Set();
 
 function loadSources() {
   try {
     const saved = JSON.parse(localStorage.getItem(SOURCES_KEY));
     if (Array.isArray(saved)) {
-      __sources = new Set(saved);
-      // Never persist podcast-only filter across sessions
-      if (__sources.size === 1 && __sources.has('podcast')) {
-        __sources.clear();
-        saveSources();
+      if (saved.length === 0) {
+        __allChecked = true;
+        __sources = new Set();
+      } else {
+        __allChecked = false;
+        __sources = new Set(saved);
       }
     }
   } catch {}
@@ -676,7 +683,8 @@ function extractImg(post) {
 }
 
 function isSourceVisible(src) {
-  return __sources.size === 0 || __sources.has(src);
+  if (__allChecked) return true;
+  return __sources.has(src);
 }
 
 function isMobile() {
@@ -689,7 +697,7 @@ function applyFilter() {
     .filter(e => isDateVisible(e));
   render(entries);
 
-  document.getElementById('chk-all').checked = __sources.size === 0;
+  document.getElementById('chk-all').checked = __allChecked;
 
   ALL_SOURCES.forEach(src => {
     document.querySelector(`.source-row[data-src="${src}"] input`)
@@ -699,7 +707,7 @@ function applyFilter() {
   if (podChk) podChk.checked = isSourceVisible('podcast');
 
   document.getElementById('sources-btn-count').textContent =
-    __sources.size === 0 ? 'todas' : `${__sources.size}`;
+    __allChecked ? 'todas' : (__sources.size === 0 ? 'ninguna' : `${__sources.size}`);
 }
 
 function esc(s) {
