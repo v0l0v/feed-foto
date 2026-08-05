@@ -541,10 +541,11 @@ function enrichContent(live, fallback) {
   const byLink = new Map((fallback || []).map(i => [i.link, i]));
   return live.map(i => {
     const f = byLink.get(i.link);
-    if (f && (f.content || '').length > (i.content || '').length) {
-      return { ...i, content: f.content };
-    }
-    return i;
+    if (!f) return i;
+    const merged = { ...i };
+    if ((f.content || '').length > (i.content || '').length) merged.content = f.content;
+    if (!merged.thumbnail && f.thumbnail) merged.thumbnail = f.thumbnail;
+    return merged;
   });
 }
 
