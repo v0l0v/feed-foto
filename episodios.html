@@ -37,6 +37,37 @@
     flex-direction: column;
   }
   .episode.is-playing { border-color: #ff0100; box-shadow: 0 0 20px rgba(255,1,0,0.25); }
+  .episode { cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+  .episode:hover { border-color: rgba(255,1,0,0.5); }
+
+  .ep-load {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(240,236,228,0.45);
+  }
+
+  .cassette {
+    display: inline-flex;
+    gap: 2px;
+  }
+  .cassette .reel {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.25);
+    background:
+      radial-gradient(circle at center, #0a0a0a 28%, transparent 30%),
+      repeating-conic-gradient(rgba(255,255,255,0.08) 0deg 15deg, transparent 15deg 30deg);
+  }
+  #podcast-hero-player .cassette .reel { width: 26px; height: 26px; }
+  .cassette.spinning .reel { animation: reelspin 0.6s linear infinite; }
+  .cassette.spinning .reel:nth-child(2) { animation-duration: 0.9s; }
+  @keyframes reelspin { to { transform: rotate(360deg); } }
 
   .ep-art {
     aspect-ratio: 16 / 9;
@@ -134,6 +165,7 @@
       </div>
     </div>
     <div class="podcast-player" id="podcast-hero-player" data-url="">
+      <span class="cassette" aria-hidden="true"><span class="reel"></span><span class="reel"></span></span>
       <button class="podcast-play" aria-label="Reproducir">▶</button>
       <div class="podcast-progress"><div class="podcast-progress-fill"></div></div>
       <span class="podcast-time">0:00 / --:--</span>
@@ -182,86 +214,172 @@ function fmtDesc(desc) {
   return items.map(i => '<p style="margin:0 0 0.6rem">' + esc(i) + '</p>').join('');
 }
 
-const players = new Map();
+let episodes = [];
+let current = null;
+let activeCard = null;
 
-function bindPlayer(root) {
+function cassetteSound() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = cassetteSound.ctx || (cassetteSound.ctx = new Ctx());
+    if (ctx.state === 'suspended') ctx.resume();
+    const t0 = ctx.currentTime;
+    const master = ctx.createGain();
+    master.gain.value = 0.16;
+    master.connect(ctx.destination);
+
+    const thunk = (t, f, d, g) => {
+      const o = ctx.createOscillator();
+      const og = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(f, t);
+      o.frequency.exponentialRampToValueAtTime(f * 0.45, t + d);
+      og.gain.setValueAtTime(g, t);
+      og.gain.exponentialRampToValueAtTime(0.001, t + d);
+      o.connect(og).connect(master);
+      o.start(t); o.stop(t + d + 0.02);
+    };
+    const click = () => {
+      const len = Math.floor(ctx.sampleRate * 0.035);
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 1900; bp.Q.value = 1;
+      const g = ctx.createGain(); g.gain.value = 0.7;
+      src.connect(bp).connect(g).connect(master);
+      src.start(t0);
+    };
+
+    thunk(t0, 115, 0.16, 0.55);
+    click();
+    thunk(t0 + 0.1, 85, 0.22, 0.45);
+
+    const mlen = Math.floor(ctx.sampleRate * 0.35);
+    const mbuf = ctx.createBuffer(1, mlen, ctx.sampleRate);
+    const mdata = mbuf.getChannelData(0);
+    for (let i = 0; i < mlen; i++) mdata[i] = (Math.random() * 2 - 1) * Math.sin(i / mlen * Math.PI);
+    const motor = ctx.createBufferSource();
+    motor.buffer = mbuf;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 850;
+    const mg = ctx.createGain();
+    mg.gain.setValueAtTime(0.35, t0 + 0.1);
+    mg.gain.exponentialRampToValueAtTime(0.001, t0 + 0.5);
+    motor.connect(lp).connect(mg).connect(master);
+    motor.start(t0 + 0.1); motor.stop(t0 + 0.52);
+  } catch (e) {}
+}
+
+function radioEls() {
+  const player = document.getElementById('podcast-hero-player');
+  return {
+    player,
+    btn: player.querySelector('.podcast-play'),
+    fill: player.querySelector('.podcast-progress-fill'),
+    time: player.querySelector('.podcast-time'),
+    cassette: player.querySelector('.cassette'),
+  };
+}
+
+function ensureRadio(url) {
+  if (current && current.url === url) return current;
+  if (current) { current.audio.pause(); current.audio.src = ''; }
+  const { player, btn, fill, time, cassette } = radioEls();
+  const audio = new Audio(url);
+  audio.preload = 'none';
+  audio.addEventListener('timeupdate', () => {
+    if (!audio.duration) return;
+    fill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+    time.textContent = fmtDur(Math.floor(audio.currentTime)) + ' / ' + fmtDur(Math.floor(audio.duration));
+  });
+  audio.addEventListener('loadedmetadata', () => { time.textContent = '0:00 / ' + fmtDur(Math.floor(audio.duration)); });
+  audio.addEventListener('playing', () => {
+    btn.textContent = '⏸';
+    player.classList.add('is-playing');
+    cassette.classList.add('spinning');
+  });
+  audio.addEventListener('pause', () => {
+    btn.textContent = '▶';
+    player.classList.remove('is-playing');
+    cassette.classList.remove('spinning');
+  });
+  audio.addEventListener('ended', () => {
+    btn.textContent = '▶';
+    fill.style.width = '0%';
+    time.textContent = '0:00 / ' + fmtDur(Math.floor(audio.duration));
+    player.classList.remove('is-playing');
+    cassette.classList.remove('spinning');
+    if (activeCard) activeCard.classList.remove('is-playing');
+    activeCard = null;
+    current = null;
+  });
+  current = { audio, url, player, btn, fill, time, cassette };
+  return current;
+}
+
+function selectEpisode(card) {
+  const e = episodes.find(x => String(x.date) === card.dataset.id);
+  if (!e) return;
+  cassetteSound();
+  const url = RELEASE + '/podcast-' + e.date + '.mp3';
+  const r = ensureRadio(url);
+  const num = episodes.length - episodes.indexOf(e);
+  document.getElementById('podcast-hero-title').textContent = e.podcast_title || 'Resumen diario';
+  document.getElementById('podcast-hero-num').textContent = 'episodio ' + num + ' · ' + fmtFecha(e.date) + ' · ' + fmtDur(e.duration);
+  r.player.dataset.url = url;
+  r.fill.style.width = '0%';
+  r.time.textContent = '0:00 / ' + fmtDur(e.duration);
+  document.querySelectorAll('.episode.is-playing').forEach(c => c.classList.remove('is-playing'));
+  activeCard = card;
+  card.classList.add('is-playing');
+  r.audio.play().catch(() => {});
+  document.getElementById('podcast-hero').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function bindRadio(root) {
   root.addEventListener('click', (e) => {
-    const btn = e.target.closest('.podcast-play');
-    if (btn) {
-      const player = btn.closest('.podcast-player');
-      if (!player) return;
-      const url = player.dataset.url;
-      let p = players.get(url);
-      if (!p) {
-        const audio = new Audio(url);
-        audio.preload = 'none';
-        const fill = player.querySelector('.podcast-progress-fill');
-        const time = player.querySelector('.podcast-time');
-        const card = player.closest('.episode');
-        audio.addEventListener('timeupdate', () => {
-          if (!audio.duration) return;
-          fill.style.width = (audio.currentTime / audio.duration * 100) + '%';
-          time.textContent = fmtDur(Math.floor(audio.currentTime)) + ' / ' + fmtDur(Math.floor(audio.duration));
-        });
-        audio.addEventListener('loadedmetadata', () => { time.textContent = '0:00 / ' + fmtDur(Math.floor(audio.duration)); });
-        audio.addEventListener('ended', () => {
-          btn.textContent = '▶';
-          fill.style.width = '0%';
-          time.textContent = '0:00 / ' + fmtDur(Math.floor(audio.duration));
-          player.classList.remove('is-playing');
-          if (card) card.classList.remove('is-playing');
-        });
-        p = { audio, btn, fill, time, player, card };
-        players.set(url, p);
-      }
-      players.forEach((q) => {
-        if (q !== p && !q.audio.paused) {
-          q.audio.pause();
-          q.btn.textContent = '▶';
-          q.player.classList.remove('is-playing');
-          if (q.card) q.card.classList.remove('is-playing');
-        }
-      });
-      if (p.audio.paused) {
-        p.audio.play().catch(() => {});
-        btn.textContent = '⏸';
-        player.classList.add('is-playing');
-        if (p.card) p.card.classList.add('is-playing');
-      } else {
-        p.audio.pause();
-        btn.textContent = '▶';
-        player.classList.remove('is-playing');
-        if (p.card) p.card.classList.remove('is-playing');
-      }
-      return;
-    }
-
-    const progress = e.target.closest('.podcast-progress');
-    if (progress) {
-      const player = progress.closest('.podcast-player');
-      const p = player && players.get(player.dataset.url);
-      if (p && p.audio.duration) {
-        const r = progress.getBoundingClientRect();
-        p.audio.currentTime = ((e.clientX - r.left) / r.width) * p.audio.duration;
-      }
-      return;
-    }
-
     const rm = e.target.closest('.ep-readmore');
     if (rm) {
       const desc = rm.closest('.ep-body').querySelector('.ep-desc');
       const open = desc.classList.toggle('expanded');
       rm.textContent = open ? 'ocultar resumen' : 'ver resumen';
       rm.setAttribute('aria-expanded', String(open));
+      return;
+    }
+    const play = e.target.closest('.podcast-play');
+    if (play) {
+      if (current) {
+        if (current.audio.paused) { cassetteSound(); current.audio.play().catch(() => {}); }
+        else current.audio.pause();
+      }
+      return;
+    }
+    const progress = e.target.closest('.podcast-progress');
+    if (progress) {
+      if (current && current.audio.duration) {
+        const r = progress.getBoundingClientRect();
+        current.audio.currentTime = ((e.clientX - r.left) / r.width) * current.audio.duration;
+      }
+      return;
+    }
+    const card = e.target.closest('.episode');
+    if (card) selectEpisode(card);
+  });
+
+  root.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('episode')) {
+      e.preventDefault();
+      selectEpisode(e.target);
     }
   });
 
   root.addEventListener('input', (e) => {
     const vol = e.target.closest('.podcast-volume');
-    if (!vol) return;
-    const player = vol.closest('.podcast-player');
-    const p = player && players.get(player.dataset.url);
-    if (p && p.audio) p.audio.volume = parseFloat(vol.value);
+    if (vol && current && current.audio) current.audio.volume = parseFloat(vol.value);
   });
 }
 
@@ -273,29 +391,23 @@ function renderEpisodes(meta) {
     return;
   }
 
-  const sorted = [...meta].sort((a, b) => String(b.date).localeCompare(String(a.date)));
-  document.getElementById('hero-count').textContent = sorted.length + (sorted.length === 1 ? ' episodio' : ' episodios');
+  episodes = [...meta].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  document.getElementById('hero-count').textContent = episodes.length + (episodes.length === 1 ? ' episodio' : ' episodios');
 
-  const latest = sorted[0];
+  const latest = episodes[0];
   const heroImg = document.getElementById('podcast-hero-img');
   const heroTitle = document.getElementById('podcast-hero-title');
   const heroNum = document.getElementById('podcast-hero-num');
-  const heroPlayer = document.getElementById('podcast-hero-player');
   if (heroImg) heroImg.src = latest.image || COVER;
   if (heroTitle) heroTitle.textContent = latest.podcast_title || 'Resumen diario';
-  if (heroNum) heroNum.textContent = 'episodio ' + sorted.length + ' · ' + fmtFecha(latest.date) + ' · ' + fmtDur(latest.duration);
-  if (heroPlayer) {
-    heroPlayer.dataset.url = RELEASE + '/podcast-' + latest.date + '.mp3';
-    const time = heroPlayer.querySelector('.podcast-time');
-    if (time) time.textContent = '0:00 / ' + fmtDur(latest.duration);
-  }
+  if (heroNum) heroNum.textContent = 'episodio ' + episodes.length + ' · ' + fmtFecha(latest.date) + ' · ' + fmtDur(latest.duration);
+  ensureRadio(RELEASE + '/podcast-' + latest.date + '.mp3');
   document.getElementById('podcast-hero').classList.remove('hide');
 
-  el.innerHTML = sorted.map((e, i) => {
-    const num = sorted.length - i;
+  el.innerHTML = episodes.map((e, i) => {
+    const num = episodes.length - i;
     const title = e.podcast_title || 'Resumen diario';
-    const dur = fmtDur(e.duration);
-    return `<article class="episode" data-id="${e.date}">
+    return `<article class="episode" data-id="${e.date}" tabindex="0" role="button" aria-label="Cargar y reproducir episodio ${num}">
       <div class="ep-art">
         <img src="${e.image || COVER}" alt="" loading="lazy" onerror="this.src='${COVER}'">
       </div>
@@ -304,12 +416,7 @@ function renderEpisodes(meta) {
         <h2 class="ep-title">${esc(title)}</h2>
         <div class="ep-desc">${fmtDesc(e.description)}</div>
         <button class="ep-readmore" type="button" aria-expanded="false">ver resumen</button>
-        <div class="podcast-player" data-url="${RELEASE}/podcast-${e.date}.mp3">
-          <button class="podcast-play" aria-label="Reproducir">▶</button>
-          <div class="podcast-progress"><div class="podcast-progress-fill"></div></div>
-          <span class="podcast-time">0:00 / ${dur}</span>
-          <input type="range" class="podcast-volume" min="0" max="1" step="0.05" value="1" aria-label="Volumen">
-        </div>
+        <span class="ep-load"><span class="cassette" aria-hidden="true"><span class="reel"></span><span class="reel"></span></span> cargar en la radio</span>
       </div>
     </article>`;
   }).join('');
@@ -318,7 +425,7 @@ function renderEpisodes(meta) {
 }
 
 (async () => {
-  bindPlayer(document.body);
+  bindRadio(document.body);
   try {
     const resp = await fetch('podcast_meta.json', { cache: 'no-store' });
     const meta = await resp.json();
