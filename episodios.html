@@ -204,6 +204,15 @@
       <img src="pdv.png" alt="Punto de vista" class="logo-img">
       <span class="logo-text">Punto de vista</span>
     </a>
+    <div class="header-controls" role="toolbar" aria-label="Controles de filtro">
+      <a id="podcast-filter-btn" class="sources-btn podcast-btn active" href="episodios.html" aria-label="Ir a los episodios del podcast">podcast</a>
+      <button id="date-btn" class="sources-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="date-panel" aria-label="Filtrar por fecha">
+        cuando <span id="date-btn-label">todo</span> ⌄
+      </button>
+      <button id="sources-btn" class="sources-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="sources-panel" aria-label="Seleccionar fuentes">
+        fuentes <span id="sources-btn-count" aria-live="polite">todas</span> ⌄
+      </button>
+    </div>
   </div>
 </header>
 
