@@ -1616,12 +1616,29 @@ function closeModal() {
 }
 
 function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
+  const el = document.documentElement;
+  const rq = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen || el.mozRequestFullScreen;
+  const ex = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen || document.mozCancelFullScreen;
+  if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement && !document.mozFullScreen) {
+    rq.call(el).catch(() => {});
   } else {
-    document.exitFullscreen();
+    ex.call(document).catch(() => {});
   }
 }
+
+function updateFullscreenBtn() {
+  const btn = document.getElementById('fullscreen-btn');
+  if (!btn) return;
+  const fs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || document.mozFullScreen);
+  btn.textContent = fs ? '\u26E7' : '\u26F6';
+  btn.setAttribute('aria-label', fs ? 'Salir de pantalla completa' : 'Pantalla completa');
+}
+
+document.addEventListener('fullscreenchange', updateFullscreenBtn);
+document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+document.addEventListener('msfullscreenchange', updateFullscreenBtn);
+document.addEventListener('mozfullscreenchange', updateFullscreenBtn);
+updateFullscreenBtn();
 
 function closeTop() {
   const body = document.getElementById('modal-body');
@@ -1630,22 +1647,14 @@ function closeTop() {
 }
 document.getElementById('modal-backdrop').addEventListener('click', closeTop);
 
-let __fullscreenEscape = false;
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    const fs = !!document.fullscreenElement;
     closeModal();
+    const fs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || document.mozFullScreen);
     if (fs) {
-      __fullscreenEscape = true;
-      document.documentElement.requestFullscreen().catch(() => {});
+      const rq = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen || document.documentElement.msRequestFullscreen || document.documentElement.mozRequestFullScreen;
+      rq.call(document.documentElement).catch(() => {});
     }
-  }
-});
-
-document.addEventListener('fullscreenchange', () => {
-  if (!document.fullscreenElement && __fullscreenEscape) {
-    __fullscreenEscape = false;
-    document.documentElement.requestFullscreen().catch(() => {});
   }
 });
 
