@@ -676,9 +676,6 @@ function extractImg(post) {
 }
 
 function isSourceVisible(src) {
-  // Podcasts are opt-in: only show when explicitly filtering by podcast
-  if (src === 'podcast') return __sources.has('podcast');
-  if (__sources.has('podcast')) return false; // hide news when podcast filter active
   return __sources.size === 0 || __sources.has(src);
 }
 
@@ -691,24 +688,18 @@ function applyFilter() {
     .filter(e => isSourceVisible(e._source))
     .filter(e => isDateVisible(e));
   render(entries);
-  
-  const isPodcastOnly = __sources.size === 1 && __sources.has('podcast');
-  const podBtn = document.getElementById('podcast-filter-btn');
-  podBtn.classList.toggle('active', isPodcastOnly);
-  podBtn.setAttribute('aria-pressed', isPodcastOnly ? 'true' : 'false');
+
   document.getElementById('chk-all').checked = __sources.size === 0;
-  
+
   ALL_SOURCES.forEach(src => {
     document.querySelector(`.source-row[data-src="${src}"] input`)
       .checked = isSourceVisible(src);
   });
-  
-  if (isPodcastOnly) {
-    document.getElementById('sources-btn-count').textContent = 'podcast';
-  } else {
-    document.getElementById('sources-btn-count').textContent =
-      __sources.size === 0 ? 'todas' : `${__sources.size}`;
-  }
+  const podChk = document.querySelector('.source-row[data-src="podcast"] input');
+  if (podChk) podChk.checked = isSourceVisible('podcast');
+
+  document.getElementById('sources-btn-count').textContent =
+    __sources.size === 0 ? 'todas' : `${__sources.size}`;
 }
 
 function esc(s) {
@@ -777,7 +768,8 @@ function render(entries) {
   const huck = entries.slice(0, 100).filter(e => e._source === 'huck').length;
   const lensculture = entries.slice(0, 100).filter(e => e._source === 'lensculture').length;
   const odlp = entries.slice(0, 100).filter(e => e._source === 'odlp').length;
-  const magnum = total - colossal - lomo - boom - tpj - swan - huck - lensculture - odlp;
+  const pod = entries.slice(0, 100).filter(e => e.is_podcast_entry).length;
+  const magnum = total - colossal - lomo - boom - tpj - swan - huck - lensculture - odlp - pod;
   document.getElementById('count-colossal').textContent = String(colossal);
   document.getElementById('count-lomography').textContent = String(lomo);
   document.getElementById('count-booooooom').textContent = String(boom);
@@ -787,6 +779,7 @@ function render(entries) {
   document.getElementById('count-lensculture').textContent = String(lensculture);
   document.getElementById('count-odlp').textContent = String(odlp);
   document.getElementById('count-magnum').textContent = String(magnum);
+  document.getElementById('count-podcast').textContent = String(pod);
   document.getElementById('count-all').textContent = String(total);
   document.getElementById('footer-info').textContent = total + ' fotografías';
   const showEmpty = entries.length === 0;
