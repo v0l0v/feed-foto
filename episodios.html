@@ -28,61 +28,30 @@
     gap: var(--gap);
   }
 
-  .episode {
-    background: linear-gradient(180deg, #141414, #0f0f0f);
-    border: 1px solid rgba(255,1,0,0.22);
-    border-left: 3px solid #ff0100;
-    border-radius: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  .episode.is-playing { border-color: #ff0100; box-shadow: 0 0 20px rgba(255,1,0,0.25); }
-  .episode { cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
-  .episode:hover { border-color: rgba(255,1,0,0.5); }
-
-  .ep-art {
-    aspect-ratio: 16 / 9;
-    overflow: hidden;
-    background: #0a0a0a;
-  }
-  .ep-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
-  .ep-body { display: flex; flex-direction: column; gap: 0.4rem; padding: 0.9rem 1rem; background: #0a0a0a; flex: 1; }
-  .ep-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    font-size: 0.7rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #ff0100;
-  }
-  .ep-date { color: rgba(240,236,228,0.4); }
-  .ep-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    line-height: 1.25;
-    margin: 0.2rem 0 0;
+  .episode.is-playing,
+  .episode.is-playing:hover {
+    z-index: 2;
+    box-shadow:
+      0 0 0 1.5px rgba(255, 1, 0, 0.9),
+      0 0 35px rgba(255, 1, 0, 0.35);
   }
 
   .ep-readmore {
-    margin-top: auto;
-    align-self: flex-start;
-    height: 44px;
-    padding: 0 1.1rem;
-    background: none;
-    border: 1px solid rgba(255,1,0,0.5);
+    margin-left: auto;
+    pointer-events: auto;
+    height: 30px;
+    padding: 0 0.9rem;
+    background: #d0d0d0;
+    color: #000;
+    border: none;
     border-radius: 2px;
-    color: rgba(255,1,0,0.9);
-    font-size: 0.65rem;
+    font-size: 0.55rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.2s, color 0.2s;
   }
   .ep-readmore:hover { background: #ff0100; color: #fff; }
-
-  .episode .podcast-player { margin-top: auto; }
 
   .ep-empty { grid-column: 1 / -1; text-align: center; color: rgba(240,236,228,0.4); padding: 4rem 0; }
 
@@ -90,8 +59,7 @@
 
   @media (max-width: 720px) {
     #episodes { grid-template-columns: 1fr; gap: 2px; padding: 2px; }
-    .ep-art { aspect-ratio: 4 / 3; }
-    .ep-title { font-size: 1rem; }
+    .card { aspect-ratio: 16 / 9; }
   }
 </style>
 </head>
@@ -182,6 +150,24 @@ function fmtDesc(desc) {
   const items = splitItems(desc);
   if (items.length <= 1) return esc(desc);
   return items.map(i => '<p style="margin:0 0 0.6rem">' + esc(i) + '</p>').join('');
+}
+
+function epImgLoaded(img) {
+  img.classList.add('loaded');
+  const card = img.closest('.card');
+  const sk = card && card.querySelector('.card-skeleton');
+  if (sk) sk.remove();
+}
+
+function epImgError(img) {
+  const card = img.closest('.card');
+  img.remove();
+  if (card) {
+    const sk = card.querySelector('.card-skeleton');
+    if (sk) sk.remove();
+    const overlay = card.querySelector('.card-overlay');
+    if (overlay) overlay.remove();
+  }
 }
 
 let episodes = [];
@@ -392,20 +378,121 @@ function renderEpisodes(meta) {
   el.innerHTML = episodes.map((e, i) => {
     const num = episodes.length - i;
     const title = e.podcast_title || 'Resumen diario';
-    return `<article class="episode" data-id="${e.date}" tabindex="0" role="button" aria-label="Cargar y reproducir episodio ${num}">
-      <div class="ep-art">
-        <img src="${e.image || COVER}" alt="" loading="lazy" onerror="this.src='${COVER}'">
+    return `<div class="card episode" data-color="1" data-id="${e.date}" role="button" tabindex="0" aria-label="Cargar y reproducir episodio ${num}">
+      <div class="card-inner">
+        <div class="card-skeleton"></div>
+        <img class="card-image" src="${e.image || COVER}" alt="" loading="lazy" onload="epImgLoaded(this)" onerror="epImgError(this)">
+        <div class="card-overlay color"></div>
       </div>
-      <div class="ep-body">
-        <span class="ep-badge"><span class="podcast-dot"></span> Episodio ${num} · <span class="ep-date">${fmtFecha(e.date)}</span></span>
-        <h2 class="ep-title">${esc(title)}</h2>
-        <button class="ep-readmore" type="button" aria-haspopup="dialog">ver resumen</button>
+      <div class="card-info">
+        <div class="card-source">Episodio ${num} · ${fmtFecha(e.date)}</div>
+        <div class="card-title">${esc(title)}</div>
+        <div class="card-meta">
+          <span class="card-date">${fmtDur(e.duration)}</span>
+          <button class="ep-readmore" type="button" aria-haspopup="dialog">ver resumen</button>
+        </div>
       </div>
-    </article>`;
+    </div>`;
   }).join('');
 
   document.getElementById('loader').classList.add('hide');
 }
+
+// ─── Card Tilt / Parallax (igual que la portada) ────────────────────────────
+(function initCardTilt() {
+  const MAX_ANGLE = 12;
+  const grid = document.getElementById('episodes');
+  if (!grid) return;
+  let rafId = null;
+  let activeCard = null;
+  let targetRx = 0, targetRy = 0, targetTx = 0, targetTy = 0;
+  let currentRx = 0, currentRy = 0, currentTx = 0, currentTy = 0;
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function animate() {
+    if (!activeCard) return;
+    const speed = 0.12;
+    currentRx = lerp(currentRx, targetRx, speed);
+    currentRy = lerp(currentRy, targetRy, speed);
+    currentTx = lerp(currentTx, targetTx, speed);
+    currentTy = lerp(currentTy, targetTy, speed);
+    activeCard.style.setProperty('--rx', currentRx.toFixed(3) + 'deg');
+    activeCard.style.setProperty('--ry', currentRy.toFixed(3) + 'deg');
+    activeCard.style.setProperty('--tx', currentTx.toFixed(3));
+    activeCard.style.setProperty('--ty', currentTy.toFixed(3));
+    rafId = requestAnimationFrame(animate);
+  }
+
+  function resetCard(card) {
+    if (!card) return;
+    targetRx = 0; targetRy = 0; targetTx = 0; targetTy = 0;
+    const reset = () => {
+      currentRx = lerp(currentRx, 0, 0.2);
+      currentRy = lerp(currentRy, 0, 0.2);
+      currentTx = lerp(currentTx, 0, 0.2);
+      currentTy = lerp(currentTy, 0, 0.2);
+      card.style.setProperty('--rx', currentRx.toFixed(3) + 'deg');
+      card.style.setProperty('--ry', currentRy.toFixed(3) + 'deg');
+      card.style.setProperty('--tx', currentTx.toFixed(3));
+      card.style.setProperty('--ty', currentTy.toFixed(3));
+      if (Math.abs(currentRx) > 0.05 || Math.abs(currentRy) > 0.05) {
+        requestAnimationFrame(reset);
+      } else {
+        card.classList.remove('is-tilting');
+        card.style.removeProperty('--rx');
+        card.style.removeProperty('--ry');
+        card.style.removeProperty('--tx');
+        card.style.removeProperty('--ty');
+      }
+    };
+    requestAnimationFrame(reset);
+  }
+
+  grid.addEventListener('mousemove', (e) => {
+    const card = e.target.closest('.card');
+    if (!card) return;
+    if (activeCard && activeCard !== card) {
+      resetCard(activeCard);
+      cancelAnimationFrame(rafId);
+    }
+    if (activeCard !== card) {
+      activeCard = card;
+      currentRx = 0; currentRy = 0;
+      currentTx = 0; currentTy = 0;
+      card.classList.add('is-tilting');
+      rafId = requestAnimationFrame(animate);
+    }
+    const rect = card.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = (e.clientX - cx) / (rect.width / 2);
+    const dy = (e.clientY - cy) / (rect.height / 2);
+    targetRy = dx * MAX_ANGLE;
+    targetRx = -dy * MAX_ANGLE;
+    targetTx = dx * 15;
+    targetTy = dy * 15;
+  }, { passive: true });
+
+  grid.addEventListener('mouseleave', () => {
+    if (!activeCard) return;
+    cancelAnimationFrame(rafId);
+    const cardToReset = activeCard;
+    activeCard = null;
+    resetCard(cardToReset);
+  });
+
+  grid.addEventListener('mouseout', (e) => {
+    const card = e.target.closest('.card');
+    if (card !== activeCard) return;
+    const related = e.relatedTarget;
+    if (related && related.closest && related.closest('.card') === activeCard) return;
+    cancelAnimationFrame(rafId);
+    const cardToReset = activeCard;
+    activeCard = null;
+    resetCard(cardToReset);
+  });
+})();
 
 (async () => {
   bindRadio(document.body);
