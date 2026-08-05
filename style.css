@@ -125,10 +125,10 @@ header {
 }
 .sources-btn:hover,
 .sources-btn.active {
-  background: rgba(255,255,255,0.13);
-  border-color: rgba(255,1,0,0.6);
-  color: #ff0100;
-  box-shadow: 0 0 12px rgba(255,1,0,0.15);
+  background: #ff0100;
+  border-color: #ff0100;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(255,1,0,0.3);
 }
 .podcast-btn {
   display: inline-flex;
