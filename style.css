@@ -216,16 +216,6 @@ header {
 
 #loader.hide { display: none; }
 
-#empty {
-  text-align: center;
-  padding: 5rem 2rem;
-  font-size: 0.7rem;
-  letter-spacing: 0.12em;
-  opacity: 0.2;
-}
-
-#empty.hide { display: none; }
-
 
 
 .card {

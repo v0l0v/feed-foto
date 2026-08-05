@@ -358,7 +358,7 @@ async function loadFeeds() {
 function combineAndSortAllEntries() {
   const raw = window.__rawEntries || [];
   window.__allEntries = [...raw].sort((a, b) => (b._parsedDate || 0) - (a._parsedDate || 0));
-  if (!window.__allEntries.length) { showEmpty(); return; }
+  if (!window.__allEntries.length) { document.getElementById('loader').classList.add('hide'); return; }
   applyFilter();
 }
 
@@ -784,8 +784,6 @@ function render(entries) {
   document.getElementById('count-magnum').textContent = String(magnum);
   document.getElementById('count-all').textContent = String(total);
   document.getElementById('footer-info').textContent = total + ' fotografías';
-  const showEmpty = entries.length === 0;
-  document.getElementById('empty').classList.toggle('hide', !showEmpty);
 }
 
 function fmtDate(d) {
@@ -819,11 +817,6 @@ function imgError(img) {
   }
 }
 
-
-function showEmpty() {
-  document.getElementById('loader').classList.add('hide');
-  document.getElementById('empty').classList.remove('hide');
-}
 
 function cleanContent(html) {
   const doc = new DOMParser().parseFromString(`<div id="__root">${html}</div>`, 'text/html');
