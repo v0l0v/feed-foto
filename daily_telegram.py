@@ -237,7 +237,7 @@ def main():
         size = os.path.getsize(audio_path)
         print(f'  Audio generado ({size/1024:.0f} KB)')
 
-        description = clean_text(parts[0]) if len(parts) == 2 else clean_text(summary)
+        description = clean_text(loc_parts[0]) if len(loc_parts) == 2 else clean_text(summary)
 
         duration = 0
         try:
