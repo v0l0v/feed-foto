@@ -126,6 +126,30 @@ def generate_audio(text, out_path):
         return False
 
 
+def tag_audio(audio_path, title):
+    tmp = audio_path + '.tagged.mp3'
+    try:
+        subprocess.run([
+            'ffmpeg', '-y', '-i', audio_path,
+            '-metadata', 'title=' + title,
+            '-metadata', 'artist=Punto de vista Podcast',
+            '-metadata', 'album=Punto de vista Podcast',
+            '-metadata', 'album_artist=Punto de vista Podcast',
+            '-codec', 'copy',
+            tmp,
+        ], check=True, capture_output=True, text=True, timeout=60)
+        os.replace(tmp, audio_path)
+        return True
+    except Exception as e:
+        print(f'  ⚠️ No se pudo etiquetar el audio: {e}')
+        try:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+        except Exception:
+            pass
+        return False
+
+
 def clean_text(t):
     t = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF'
                r'\U0001F1E0-\U0001F1FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F'
@@ -205,10 +229,9 @@ def main():
 
     print(f'  Resumen generado ({len(summary)} chars)')
 
-    header = f'📸 <b>Punto de vista</b> · {fmt_fecha_es(today)}\n\n'
-
     podcast_title = ''
     locutable = summary
+    resumen = ''
     title_parts = summary.split(TITLE_MARKER, 1)
     if len(title_parts) == 2:
         podcast_title = title_parts[0].strip()
@@ -216,27 +239,16 @@ def main():
         loc_parts = remaining.split(LOCUTABLE_MARKER, 1)
         if len(loc_parts) == 2:
             locutable = loc_parts[1].strip()
-            full_msg = header + loc_parts[0].strip()
+            resumen = loc_parts[0].strip()
         else:
-            full_msg = header + remaining
+            resumen = remaining
     else:
         loc_parts = summary.split(LOCUTABLE_MARKER, 1)
         if len(loc_parts) == 2:
             locutable = loc_parts[1].strip()
-            full_msg = header + loc_parts[0].strip()
+            resumen = loc_parts[0].strip()
         else:
-            full_msg = header + summary
-
-    if len(full_msg) > 4000:
-        full_msg = full_msg[:3997] + '...'
-
-    print('  Enviando texto a Telegram...')
-    result = send_telegram(full_msg)
-    if result and result.get('ok'):
-        print('  ✅ Texto enviado')
-    else:
-        err = result.get('description', '?') if result else '?'
-        print(f'  ❌ Error al enviar texto: {err}')
+            resumen = summary
 
     print('  Generando audio...')
     clean_text_audio = clean_text(locutable)
@@ -249,7 +261,7 @@ def main():
         size = os.path.getsize(audio_path)
         print(f'  Audio generado ({size/1024:.0f} KB)')
 
-        description = clean_text(loc_parts[0]) if len(loc_parts) == 2 else clean_text(summary)
+        description = clean_text(resumen)
 
         duration = 0
         try:
@@ -300,10 +312,18 @@ def main():
             json.dump(meta, f, ensure_ascii=False, indent=2)
         print(f'  Meta del podcast actualizado ({len(meta)} episodios)')
 
+        tag_title = clean_text(podcast_title) if podcast_title else f'Podcast {today.isoformat()}'
+        if tag_audio(audio_path, tag_title):
+            print('  Audio etiquetado (Punto de vista Podcast)')
+
         print('  Enviando audio a Telegram...')
-        audio_caption = f'🎙️ <b>Punto de vista</b> · {fmt_fecha_es(today)}'
+        audio_caption = f'🎙️ {fmt_fecha_es(today)}'
         if podcast_title:
             audio_caption += f'\n{clean_text(podcast_title)}'
+        if resumen:
+            audio_caption += f'\n\n{clean_text(resumen)}'
+        if len(audio_caption) > 1024:
+            audio_caption = audio_caption[:1021] + '...'
         audio_filename = f'Punto de vista - {today.isoformat()}.mp3'
         result = send_telegram_audio(audio_path, audio_caption, audio_filename)
         if result and result.get('ok'):
