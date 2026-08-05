@@ -444,25 +444,38 @@ header {
 }
 .modal-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
 
-#modal-body { padding: 2.5rem 2.5rem 2rem; }
-
-.modal-podcast-accent {
-  height: 3px;
-  background: linear-gradient(90deg, #ff0100, rgba(255,1,0,0.3));
-  margin: 0 -2.5rem 0;
-  border-radius: 4px 4px 0 0;
+.modal-tools {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
-.modal-podcast-badge {
+.modal-tool-btn {
+  background: rgba(255,255,255,0.06);
+  color: rgba(240,236,228,0.8);
+  border: 1px solid rgba(255,255,255,0.1);
+  font-family: inherit;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.9rem;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  min-height: var(--touch-min);
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.6rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #ff0100;
-  margin-bottom: 0.8rem;
+  justify-content: center;
 }
+.modal-tool-btn:hover {
+  background: rgba(255,1,0,0.15);
+  border-color: rgba(255,1,0,0.5);
+  color: #ff0100;
+}
+
+#modal-body { padding: 2.5rem 2.5rem 2rem; }
 
 .modal-title-group { margin-bottom: 1.5rem; }
 

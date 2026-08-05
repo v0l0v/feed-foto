@@ -317,10 +317,16 @@ function openPodcastResumen(e) {
   const body = document.getElementById('modal-body');
   if (!body) return;
   body.innerHTML =
-    '<div class="modal-podcast-accent"></div>' +
-    '<span class="modal-podcast-badge">Podcast · Punto de vista</span>' +
-    '<div class="modal-title-group"><h2 class="modal-title">' + esc(e.podcast_title || 'Resumen Diario') + '</h2></div>' +
-    '<div class="modal-content">' + (e.description ? fmtDesc(e.description) : '<p style="opacity:0.4">Sin descripción</p>') + '</div>';
+    '<div class="modal-tools">' +
+    '<button class="modal-tool-btn" onclick="closeModal()">← Volver</button>' +
+    '</div>' +
+    '<div class="modal-title-group">' +
+    '<h2 class="modal-title">' + esc(e.podcast_title || 'Resumen Diario') + '</h2>' +
+    '<div class="modal-meta"><span class="modal-source">Podcast · Punto de vista</span></div>' +
+    '</div>' +
+    '<div class="modal-article"><div class="modal-article-content">' +
+    (e.description ? fmtDesc(e.description) : '<p style="opacity:0.4">Sin descripción</p>') +
+    '</div></div>';
   document.getElementById('modal').classList.remove('hide');
 }
 
