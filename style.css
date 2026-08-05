@@ -209,6 +209,14 @@ header {
   margin-bottom: 0.2rem;
   padding-bottom: 0.6rem;
 }
+.source-row[data-src="podcast"] {
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-radius: 0;
+  margin-bottom: 0.2rem;
+  padding-bottom: 0.6rem;
+  color: #ff0100;
+}
+.source-row[data-src="podcast"] .src-count { color: rgba(240,236,228,0.45); }
 
 #loader {
   text-align: center;
