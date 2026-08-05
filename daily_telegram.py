@@ -35,8 +35,13 @@ MAX_RETRIES = 5
 RETRY_DELAY = 15
 
 
-def find_latest_podcast():
+def find_latest_podcast(target_date=None):
     files = sorted(Path(OUT_DIR).glob('*.podcast.md'), reverse=True)
+    if target_date:
+        for f in files:
+            if target_date.isoformat() in f.name:
+                return f
+        return None
     return files[0] if files else None
 
 
@@ -170,14 +175,15 @@ TERCERA SECCIÓN (solo el texto locutable para el audio del podcast):
 
 
 def main():
+    import sys
     os.makedirs(OUT_DIR, exist_ok=True)
     ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    today = date.today()
+    today = date.fromisoformat(sys.argv[1]) if len(sys.argv) > 1 else date.today()
     print(f'[{ts}] daily_telegram · {today}')
 
-    podcast_file = find_latest_podcast()
+    podcast_file = find_latest_podcast(today)
     if not podcast_file:
-        print('  No hay archivo .podcast.md')
+        print(f'  No hay archivo .podcast.md para {today}')
         return
 
     print(f'  Leyendo: {podcast_file.name}')
