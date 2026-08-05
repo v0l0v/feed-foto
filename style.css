@@ -1140,7 +1140,7 @@ footer {
 #podcast-hero {
   max-width: 1600px;
   margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0 var(--gap);
 }
 #podcast-hero.hide { display: none; }
 .podcast-hero-inner {
