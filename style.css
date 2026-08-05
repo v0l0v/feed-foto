@@ -30,7 +30,11 @@
 }
 
 html { background: var(--bg); }
-html { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
+html {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
@@ -94,6 +98,9 @@ header {
 :focus:not(:focus-visible) { outline: none; }
 
 .sources-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(255,255,255,0.08);
   color: #ddd;
   border: 1px solid rgba(255,255,255,0.12);
@@ -101,10 +108,15 @@ header {
   /* Zona táctil mínima */
   min-height: var(--touch-min);
   padding: 0 0.9rem;
+  font-family: inherit;
+  font-weight: inherit;
   font-size: 0.6rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  text-decoration: none;
   transition:
     background 0.2s ease,
     border-color 0.2s ease,
