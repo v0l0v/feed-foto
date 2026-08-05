@@ -385,6 +385,7 @@ async function fetchPodcastMeta() {
         date: e.date,
         title: `Episodio ${num} · ${e.podcast_title || 'Resumen Diario'}`,
         podcast_title: e.podcast_title || 'Resumen Diario',
+        description: e.description || '',
         num: num,
         duration: e.duration,
         images: e.images || [],
@@ -408,10 +409,10 @@ function renderPodcastHero() {
   if (img) img.src = latest.image || PODCAST_COVER;
   const title = document.getElementById('podcast-hero-title');
   if (title) title.textContent = latest.podcast_title;
-  const num = document.getElementById('podcast-hero-num');
-  if (num) num.textContent = 'episodio ' + latest.num;
-  const date = document.getElementById('podcast-hero-date');
-  if (date) date.textContent = fmtDate(new Date(latest.date + 'T00:00:00'));
+  const meta = document.getElementById('podcast-hero-meta');
+  if (meta) meta.textContent = 'episodio ' + latest.num + ' · ' + fmtDate(new Date(latest.date + 'T00:00:00')) + ' · ' + fmtDur(latest.duration);
+  const resumen = document.getElementById('podcast-hero-resumen');
+  if (resumen) resumen.onclick = (e) => { e.preventDefault(); openPodcastResumen(latest); };
   const player = document.getElementById('podcast-hero-player');
   if (player) {
     player.dataset.url = latest.link;
@@ -419,6 +420,13 @@ function renderPodcastHero() {
     if (time) time.textContent = '0:00 / ' + (latest.duration ? fmtDur(latest.duration) : '--:--');
   }
   hero.classList.remove('hide');
+}
+
+function openPodcastResumen(e) {
+  const body = document.getElementById('modal-body');
+  if (!body) return;
+  body.innerHTML = '<div class="modal-title-group"><h2 class="modal-title">' + esc(e.podcast_title || 'Resumen Diario') + '</h2></div>' + (e.description ? fmtDesc(e.description) : '<p style="opacity:0.4">Sin descripción</p>');
+  document.getElementById('modal').classList.remove('hide');
 }
 
 async function fetchColossal() {
@@ -708,6 +716,17 @@ function applyFilter() {
 
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function splitItems(desc) {
+  if (!desc) return [];
+  return desc.split(/\n{2,}|(?=\*\*)/).map(s => s.trim()).filter(Boolean);
+}
+
+function fmtDesc(desc) {
+  const items = splitItems(desc);
+  if (items.length <= 1) return esc(desc);
+  return items.map(i => '<p style="margin:0 0 0.6rem">' + esc(i) + '</p>').join('');
 }
 
 function fmtDur(sec) {

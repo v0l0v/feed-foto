@@ -75,9 +75,10 @@
       <span class="podcast-hero-badge"><span class="podcast-dot"></span> Podcast · Punto de vista</span>
       <h1 id="podcast-hero-title"></h1>
       <div class="podcast-hero-meta">
-        <span id="hero-count"></span>
-        <span id="podcast-hero-num"></span>
+        <span id="podcast-hero-meta"></span>
+        <a href="episodios.html">todos los episodios →</a>
         <a href="podcast.xml">suscripción rss</a>
+        <a href="#" id="podcast-hero-resumen" role="button">resumen</a>
       </div>
     </div>
     <div class="podcast-player" id="podcast-hero-player" data-url="">
@@ -91,6 +92,13 @@
 
 <div id="loader"><span style="color:#ff0100">●</span> cargando episodios…</div>
 <main id="episodes"></main>
+
+<div id="modal" class="hide" role="dialog" aria-modal="true" aria-label="Resumen del episodio">
+  <div id="modal-backdrop"></div>
+  <div id="modal-panel">
+    <div id="modal-body"></div>
+  </div>
+</div>
 
 <footer>
   <a href="index.html">punto de vista</a>
@@ -165,6 +173,17 @@ function epImgError(img) {
     const overlay = card.querySelector('.card-overlay');
     if (overlay) overlay.remove();
   }
+}
+
+function splitItems(desc) {
+  if (!desc) return [];
+  return desc.split(/\n{2,}|(?=\*\*)/).map(s => s.trim()).filter(Boolean);
+}
+
+function fmtDesc(desc) {
+  const items = splitItems(desc);
+  if (items.length <= 1) return esc(desc);
+  return items.map(i => '<p style="margin:0 0 0.6rem">' + esc(i) + '</p>').join('');
 }
 
 let episodes = [];
@@ -280,7 +299,9 @@ function selectEpisode(card) {
   const heroImg = document.getElementById('podcast-hero-img');
   if (heroImg) heroImg.src = e.image || COVER;
   document.getElementById('podcast-hero-title').textContent = e.podcast_title || 'Resumen diario';
-  document.getElementById('podcast-hero-num').textContent = 'episodio ' + num + ' · ' + fmtFecha(e.date) + ' · ' + fmtDur(e.duration);
+  document.getElementById('podcast-hero-meta').textContent = 'episodio ' + num + ' · ' + fmtFecha(e.date) + ' · ' + fmtDur(e.duration);
+  const resumen = document.getElementById('podcast-hero-resumen');
+  if (resumen) resumen.onclick = (ev) => { ev.preventDefault(); openPodcastResumen(e); };
   r.player.dataset.url = url;
   r.fill.style.width = '0%';
   r.time.textContent = '0:00 / ' + fmtDur(e.duration);
@@ -289,6 +310,17 @@ function selectEpisode(card) {
   card.classList.add('is-playing');
   r.audio.play().catch(() => {});
   document.getElementById('podcast-hero').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function openPodcastResumen(e) {
+  const body = document.getElementById('modal-body');
+  if (!body) return;
+  body.innerHTML = '<div class="modal-title-group"><h2 class="modal-title">' + esc(e.podcast_title || 'Resumen Diario') + '</h2></div>' + (e.description ? fmtDesc(e.description) : '<p style="opacity:0.4">Sin descripción</p>');
+  document.getElementById('modal').classList.remove('hide');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.add('hide');
 }
 
 function bindRadio(root) {
@@ -318,7 +350,10 @@ function bindRadio(root) {
       e.preventDefault();
       selectEpisode(e.target);
     }
+    if (e.key === 'Escape') closeModal();
   });
+
+  document.getElementById('modal-backdrop').addEventListener('click', closeModal);
 
   root.addEventListener('input', (e) => {
     const vol = e.target.closest('.podcast-volume');
@@ -335,15 +370,15 @@ function renderEpisodes(meta) {
   }
 
   episodes = [...meta].sort((a, b) => String(b.date).localeCompare(String(a.date)));
-  document.getElementById('hero-count').textContent = episodes.length + (episodes.length === 1 ? ' episodio' : ' episodios');
-
   const latest = episodes[0];
   const heroImg = document.getElementById('podcast-hero-img');
   const heroTitle = document.getElementById('podcast-hero-title');
-  const heroNum = document.getElementById('podcast-hero-num');
+  const heroMeta = document.getElementById('podcast-hero-meta');
   if (heroImg) heroImg.src = latest.image || COVER;
   if (heroTitle) heroTitle.textContent = latest.podcast_title || 'Resumen diario';
-  if (heroNum) heroNum.textContent = 'episodio ' + episodes.length + ' · ' + fmtFecha(latest.date) + ' · ' + fmtDur(latest.duration);
+  if (heroMeta) heroMeta.textContent = 'episodio ' + episodes.length + ' · ' + fmtFecha(latest.date) + ' · ' + fmtDur(latest.duration);
+  const resumen = document.getElementById('podcast-hero-resumen');
+  if (resumen) resumen.onclick = (ev) => { ev.preventDefault(); openPodcastResumen(latest); };
   ensureRadio(RELEASE + '/podcast-' + latest.date + '.mp3');
   document.getElementById('podcast-hero').classList.remove('hide');
 
