@@ -195,6 +195,15 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchPodcastMeta();
   initPodcastPlayers();
   setInterval(() => { if (!document.hidden) refreshFeeds(); }, REFRESH_MS);
+
+  // Abrir panel si se llega desde otra página (?panel=date|sources)
+  const params = new URLSearchParams(location.search);
+  const panel = params.get('panel');
+  if (panel === 'sources') {
+    sourcesBtn.click();
+  } else if (panel === 'date') {
+    dateBtn.click();
+  }
 });
 
 // ── Estado del filtro de fecha ─────────────────────────────────────────────
