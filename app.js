@@ -723,6 +723,8 @@ function applyFilter() {
 
   document.getElementById('sources-btn-count').textContent =
     __allChecked ? 'todas' : (__sources.size === 0 ? 'ninguna' : `${__sources.size}`);
+  const sb = document.getElementById('sources-btn');
+  if (sb) sb.classList.toggle('active', !__allChecked && __sources.size > 0);
 }
 
 function forceEagerImages() {
