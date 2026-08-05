@@ -40,35 +40,6 @@
   .episode { cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
   .episode:hover { border-color: rgba(255,1,0,0.5); }
 
-  .ep-load {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin-top: 0.5rem;
-    font-size: 0.7rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: rgba(240,236,228,0.45);
-  }
-
-  .cassette {
-    display: inline-flex;
-    gap: 2px;
-  }
-  .cassette .reel {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    border: 1px solid rgba(255,255,255,0.25);
-    background:
-      radial-gradient(circle at center, #0a0a0a 28%, transparent 30%),
-      repeating-conic-gradient(rgba(255,255,255,0.08) 0deg 15deg, transparent 15deg 30deg);
-  }
-  #podcast-hero-player .cassette .reel { width: 26px; height: 26px; }
-  .cassette.spinning .reel { animation: reelspin 0.6s linear infinite; }
-  .cassette.spinning .reel:nth-child(2) { animation-duration: 0.9s; }
-  @keyframes reelspin { to { transform: rotate(360deg); } }
-
   .ep-art {
     aspect-ratio: 16 / 9;
     overflow: hidden;
@@ -165,7 +136,6 @@
       </div>
     </div>
     <div class="podcast-player" id="podcast-hero-player" data-url="">
-      <span class="cassette" aria-hidden="true"><span class="reel"></span><span class="reel"></span></span>
       <button class="podcast-play" aria-label="Reproducir">▶</button>
       <div class="podcast-progress"><div class="podcast-progress-fill"></div></div>
       <span class="podcast-time">0:00 / --:--</span>
@@ -281,14 +251,13 @@ function radioEls() {
     btn: player.querySelector('.podcast-play'),
     fill: player.querySelector('.podcast-progress-fill'),
     time: player.querySelector('.podcast-time'),
-    cassette: player.querySelector('.cassette'),
   };
 }
 
 function ensureRadio(url) {
   if (current && current.url === url) return current;
   if (current) { current.audio.pause(); current.audio.src = ''; }
-  const { player, btn, fill, time, cassette } = radioEls();
+  const { player, btn, fill, time } = radioEls();
   const audio = new Audio(url);
   audio.preload = 'none';
   audio.addEventListener('timeupdate', () => {
@@ -300,24 +269,21 @@ function ensureRadio(url) {
   audio.addEventListener('playing', () => {
     btn.textContent = '⏸';
     player.classList.add('is-playing');
-    cassette.classList.add('spinning');
   });
   audio.addEventListener('pause', () => {
     btn.textContent = '▶';
     player.classList.remove('is-playing');
-    cassette.classList.remove('spinning');
   });
   audio.addEventListener('ended', () => {
     btn.textContent = '▶';
     fill.style.width = '0%';
     time.textContent = '0:00 / ' + fmtDur(Math.floor(audio.duration));
     player.classList.remove('is-playing');
-    cassette.classList.remove('spinning');
     if (activeCard) activeCard.classList.remove('is-playing');
     activeCard = null;
     current = null;
   });
-  current = { audio, url, player, btn, fill, time, cassette };
+  current = { audio, url, player, btn, fill, time };
   return current;
 }
 
@@ -328,6 +294,8 @@ function selectEpisode(card) {
   const url = RELEASE + '/podcast-' + e.date + '.mp3';
   const r = ensureRadio(url);
   const num = episodes.length - episodes.indexOf(e);
+  const heroImg = document.getElementById('podcast-hero-img');
+  if (heroImg) heroImg.src = e.image || COVER;
   document.getElementById('podcast-hero-title').textContent = e.podcast_title || 'Resumen diario';
   document.getElementById('podcast-hero-num').textContent = 'episodio ' + num + ' · ' + fmtFecha(e.date) + ' · ' + fmtDur(e.duration);
   r.player.dataset.url = url;
@@ -416,7 +384,6 @@ function renderEpisodes(meta) {
         <h2 class="ep-title">${esc(title)}</h2>
         <div class="ep-desc">${fmtDesc(e.description)}</div>
         <button class="ep-readmore" type="button" aria-expanded="false">ver resumen</button>
-        <span class="ep-load"><span class="cassette" aria-hidden="true"><span class="reel"></span><span class="reel"></span></span> cargar en la radio</span>
       </div>
     </article>`;
   }).join('');
