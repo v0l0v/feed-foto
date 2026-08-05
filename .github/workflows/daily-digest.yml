@@ -2,7 +2,7 @@ name: Digest diario
 
 on:
   schedule:
-    - cron: '0 4 * * *'
+    - cron: '0 21 * * *'
   workflow_dispatch:
 
 concurrency:

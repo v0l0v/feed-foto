@@ -55,7 +55,22 @@ def fetch_colossal_articles():
             all_posts.extend(data)
         except:
             break
-    return [p for p in all_posts if p['date'][:10] == TODAY.isoformat()]
+    posts = [p for p in all_posts if p['date'][:10] == TODAY.isoformat()]
+    if not posts:
+        try:
+            with open(os.path.join(DIR, 'feeds.json'), encoding='utf-8') as f:
+                feeds = json.load(f).get('items', [])
+            for a in feeds:
+                if a.get('_source') == 'colossal' and (a.get('_parsedDate') or '')[:10] == TODAY.isoformat():
+                    posts.append({
+                        'title': {'rendered': a['title']},
+                        'content': {'rendered': a['content']},
+                        'link': a['link'],
+                        'date': a['_parsedDate'],
+                    })
+        except Exception:
+            pass
+    return posts
 
 def extract_colossal_photographer(html):
     m = re.search(r'All images [©©] ([^,]+)', html)
@@ -373,6 +388,10 @@ def collect_all_images(items_by_source):
     return unique
 
 def main():
+    import sys
+    global TODAY
+    if len(sys.argv) > 1:
+        TODAY = date.fromisoformat(sys.argv[1])
     os.makedirs(OUT_DIR, exist_ok=True)
     ts = datetime.now().isoformat()
     print(f'[{ts}] Generando digest de {TODAY}...')
