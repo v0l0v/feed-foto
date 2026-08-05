@@ -189,18 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Podcast button filter trigger
-  document.getElementById('podcast-filter-btn').addEventListener('click', () => {
-    if (__sources.size === 1 && __sources.has('podcast')) {
-      __sources.clear();
-    } else {
-      __sources.clear();
-      __sources.add('podcast');
-    }
-    saveSources();
-    applyFilter();
-  });
-
   loadSources();
   sortSourcesUI();
   loadFeeds();
