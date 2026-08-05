@@ -102,6 +102,37 @@ const RELEASE = 'https://github.com/v0l0v/puntodevista/releases/download/episodi
 const COVER = 'podcast-cover.png';
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
+function toggleFullscreen() {
+  const el = document.documentElement;
+  const rq = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen || el.mozRequestFullScreen;
+  const ex = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen || document.mozCancelFullScreen;
+  if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement && !document.mozFullScreen) {
+    rq.call(el).catch(() => {});
+  } else {
+    ex.call(document).catch(() => {});
+  }
+}
+
+function updateFullscreenBtn() {
+  const btn = document.getElementById('fullscreen-btn');
+  if (!btn) return;
+  const fs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || document.mozFullScreen);
+  btn.textContent = fs ? '\u26E7' : '\u26F6';
+  btn.setAttribute('aria-label', fs ? 'Salir de pantalla completa' : 'Pantalla completa');
+  if (fs) sessionStorage.setItem('fs', '1'); else sessionStorage.removeItem('fs');
+}
+
+document.addEventListener('fullscreenchange', updateFullscreenBtn);
+document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+document.addEventListener('msfullscreenchange', updateFullscreenBtn);
+document.addEventListener('mozfullscreenchange', updateFullscreenBtn);
+updateFullscreenBtn();
+if (sessionStorage.getItem('fs')) {
+  const el = document.documentElement;
+  const rq = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen || el.mozRequestFullScreen;
+  rq.call(el).catch(() => {});
+}
+
 function fmtFecha(iso) {
   const [y, m, d] = iso.split('-').map(Number);
   return d + ' de ' + MESES[m - 1] + ' de ' + y;

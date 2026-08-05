@@ -1639,6 +1639,11 @@ document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
 document.addEventListener('msfullscreenchange', updateFullscreenBtn);
 document.addEventListener('mozfullscreenchange', updateFullscreenBtn);
 updateFullscreenBtn();
+if (sessionStorage.getItem('fs')) {
+  const el = document.documentElement;
+  const rq = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen || el.mozRequestFullScreen;
+  rq.call(el).catch(() => {});
+}
 
 function closeTop() {
   const body = document.getElementById('modal-body');
