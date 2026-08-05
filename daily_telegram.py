@@ -94,11 +94,11 @@ def send_telegram(text, parse_mode='HTML'):
         return None
 
 
-def send_telegram_audio(audio_path, caption=''):
+def send_telegram_audio(audio_path, caption='', filename='podcast.mp3'):
     url = f'https://api.telegram.org/bot{TG_TOKEN}/sendAudio'
     try:
         with open(audio_path, 'rb') as f:
-            files = {'audio': ('podcast.mp3', f, 'audio/mpeg')}
+            files = {'audio': (filename, f, 'audio/mpeg')}
             data = {'chat_id': TG_CHAT_ID}
             if caption:
                 data['caption'] = caption
@@ -148,6 +148,12 @@ def clean_text(t):
 
 TITLE_MARKER = '---TITLE---'
 LOCUTABLE_MARKER = '---LOCUTABLE---'
+
+MESES_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+            'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+def fmt_fecha_es(d):
+    return f'{d.day} de {MESES_ES[d.month - 1]} de {d.year}'
 
 def build_summary_prompt(podcast_content):
     today = date.today().isoformat()
@@ -199,7 +205,7 @@ def main():
 
     print(f'  Resumen generado ({len(summary)} chars)')
 
-    header = f'📸 <b>Punto de vista</b> · {today.strftime("%d %b %Y")}\n\n'
+    header = f'📸 <b>Punto de vista</b> · {fmt_fecha_es(today)}\n\n'
 
     podcast_title = ''
     locutable = summary
@@ -295,7 +301,11 @@ def main():
         print(f'  Meta del podcast actualizado ({len(meta)} episodios)')
 
         print('  Enviando audio a Telegram...')
-        result = send_telegram_audio(audio_path, header.strip())
+        audio_caption = f'🎙️ <b>Punto de vista</b> · {fmt_fecha_es(today)}'
+        if podcast_title:
+            audio_caption += f'\n{clean_text(podcast_title)}'
+        audio_filename = f'Punto de vista - {today.isoformat()}.mp3'
+        result = send_telegram_audio(audio_path, audio_caption, audio_filename)
         if result and result.get('ok'):
             print('  ✅ Audio enviado')
         else:
