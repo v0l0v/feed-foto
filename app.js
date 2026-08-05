@@ -979,7 +979,11 @@ function extractSocialLinks(html) {
 
 function renderLomoArticle(body, entry, data) {
   const images = data.images || [];
-  const cleanContent = (data.content || '').replace(/!Image\s*\d+/g, '');
+  const cleanContent = (data.content || '')
+    .replace(/!Image\s*\d+/g, '')
+    .replace(/©\s*toms\.portra\s*\|.*$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
   const creditsHTML = (data.credits && data.credits.length) ? '<div class="modal-photographers"><span class="photographer-label">Fotógrafos</span>' + data.credits.map(c => '<a href="' + c.url + '" target="_blank" rel="noopener" class="photographer-link">' + c.name + '</a>').join(', ') + '</div>' : '';
   const lomoLinks = data.content ? extractSocialLinks(data.content) : [];
   const linksHTML = lomoLinks.length ? '<div class="modal-links">' + lomoLinks.map(l => '<a href="' + l.url + '" target="_blank" rel="noopener" class="modal-link-tag link-' + l.platform + '">' + l.text + '</a>').join('') + '</div>' : '';
