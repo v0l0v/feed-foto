@@ -6,7 +6,7 @@
 <atom:link href="https://v0l0v.github.io/puntodevista/podcast.xml" rel="self" type="application/rss+xml"/>
 <description>Resumen diario en audio de inspiración fotográfica: Colossal, Lomography Magazine, Booooooom, The Photographic Journal, Swann Galleries y Huck Magazine.</description>
 <language>es</language>
-<lastBuildDate>Wed, 05 Aug 2026 07:29:03 +0000</lastBuildDate>
+<lastBuildDate>Wed, 05 Aug 2026 07:36:36 +0000</lastBuildDate>
 <image><url>https://v0l0v.github.io/puntodevista/podcast-cover.png</url><title>Punto de vista — podcast diario</title><link>https://v0l0v.github.io/puntodevista/</link></image>
 <itunes:image href="https://v0l0v.github.io/puntodevista/podcast-cover.png"/>
 <itunes:author>Punto de vista</itunes:author>
@@ -26,6 +26,19 @@
     <itunes:title>Episodio 1 · 3 de agosto de 2026</itunes:title>
     <itunes:author>Punto de vista</itunes:author>
     <itunes:summary><![CDATA[Collecting Mailbox Memories: Stories from the Lomographers’ Print Exchange Recupera la nostalgia de enviar y recibir copias físicas de tus fotos analógicas, creando conexiones tangibles entre fotógrafos de distintos continentes. Es una invitación a explorar el soporte físico y la narrativa personal que hay detrás de cada sobre que llega al buzón. Recap: Birmingham Design Festival LomoWalk Explora el lado más experimental de la fotografía callejera con este resumen del paseo fotográfico por el barrio creativo de Digbeth. Con cámaras LomoApparat y lentes de caleidoscopio, los participantes capturaron el vibrante arte urbano de Birmingham a través de exposiciones múltiples y colores irreales.]]></itunes:summary>
+    <itunes:explicit>false</itunes:explicit>
+  </item>
+  <item>
+    <title>Episodio 2 · 5 de agosto de 2026</title>
+    <link>https://v0l0v.github.io/puntodevista/</link>
+    <guid isPermaLink="true">https://github.com/v0l0v/puntodevista/releases/download/episodios/podcast-2026-08-05.mp3</guid>
+    <pubDate>Wed, 05 Aug 2026 05:00:00 +0000</pubDate>
+    <description><![CDATA[Horizontes Visuales: Del Asfalto Urbano a las Raíces Ancestrales ---TITLE--- URBAN Photo Awards – The finalists La decimoséptima edición de estos prestigiosos premios ya tiene a sus finalistas, capturando la esencia más vibrante de la vida en la ciudad. Te invitamos a explorar una galería que es pura inspiración para quienes aman la]]></description>
+    <enclosure url="https://github.com/v0l0v/puntodevista/releases/download/episodios/podcast-2026-08-05.mp3" length="115200" type="audio/mpeg"/>
+    <itunes:image href="https://v0l0v.github.io/puntodevista/podcast-cover.png"/>
+    <itunes:title>Episodio 2 · 5 de agosto de 2026</itunes:title>
+    <itunes:author>Punto de vista</itunes:author>
+    <itunes:summary><![CDATA[Horizontes Visuales: Del Asfalto Urbano a las Raíces Ancestrales ---TITLE--- URBAN Photo Awards – The finalists La decimoséptima edición de estos prestigiosos premios ya tiene a sus finalistas, capturando la esencia más vibrante de la vida en la ciudad. Te invitamos a explorar una galería que es pura inspiración para quienes aman la]]></itunes:summary>
     <itunes:explicit>false</itunes:explicit>
   </item>
 </channel>
