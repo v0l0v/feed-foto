@@ -125,10 +125,10 @@ header {
 }
 .sources-btn:hover,
 .sources-btn.active {
-  background: #ff0100;
-  border-color: #ff0100;
-  color: #fff;
-  box-shadow: 0 0 12px rgba(255,1,0,0.3);
+  background: rgba(255,255,255,0.13);
+  border-color: rgba(255,1,0,0.6);
+  color: #ff0100;
+  box-shadow: 0 0 12px rgba(255,1,0,0.15);
 }
 .podcast-btn {
   display: inline-flex;
@@ -152,10 +152,9 @@ header {
   background: rgba(255, 1, 0, 0.08);
   box-shadow: 0 0 14px rgba(255,1,0,0.2);
 }
-.sources-btn #sources-btn-count {
+.sources-btn.active #sources-btn-count {
+  font-size: 1.5em;
   font-weight: 700;
-  opacity: 1;
-  margin-left: 0.2rem;
 }
 
 #sources-panel {
