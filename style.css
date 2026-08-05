@@ -63,21 +63,16 @@ header {
 .logo {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
-.logo-img {
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
 .logo-text {
-  font-size: 1.4rem;
-  opacity: 0.5;
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  opacity: 1;
 }
 
 .header-controls {
@@ -671,7 +666,7 @@ footer {
     grid-template-columns: repeat(2, 1fr);
   }
   .header-inner { padding: 0.75rem 1.2rem; }
-  .logo-text { font-size: 1.1rem; }
+  .logo-text { font-size: 1.35rem; }
 }
 
 /* ── Móvil (≤600px) ────────────────────────────────────── */
@@ -681,8 +676,7 @@ footer {
     padding: 0 1rem;
     height: 56px;
   }
-  .logo-text { font-size: 1rem; }
-  .logo-img { width: 1.2rem; height: 1.2rem; }
+  .logo-text { font-size: 1.15rem; }
 
   /* Botones: más grandes para touch */
   .sources-btn {

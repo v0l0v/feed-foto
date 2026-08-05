@@ -5,98 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Podcast · Punto de vista</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
   body { min-height: 100vh; }
 
-  .ep-header {
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 2rem 2rem 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-  }
-  .ep-header .logo-text { font-size: 1.1rem; }
-  .ep-nav {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.55rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-  .ep-nav a {
-    background: rgba(255,255,255,0.08);
-    color: #ddd;
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 4px;
-    min-height: var(--touch-min);
-    padding: 0 0.9rem;
-    display: inline-flex;
-    align-items: center;
-    text-decoration: none;
-    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
-  }
-  .ep-nav a:hover,
-  .ep-nav a.active {
-    background: rgba(255,1,0,0.08);
-    border-color: #ff0100;
-    color: #ff0100;
-    box-shadow: 0 0 14px rgba(255,1,0,0.2);
-  }
   .header-controls a.sources-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     text-decoration: none;
   }
-
-  .ep-hero {
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 0 2rem 2.5rem;
-    display: grid;
-    grid-template-columns: 220px 1fr;
-    gap: 2rem;
-    align-items: end;
-  }
-  .ep-hero img {
-    width: 220px;
-    height: 220px;
-    object-fit: cover;
-    display: block;
-    border: 1px solid rgba(255,1,0,0.25);
-  }
-  .ep-hero-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    font-size: 0.7rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #ff0100;
-  }
-  .ep-hero-dot { width: 6px; height: 6px; background: #ff0100; }
-  .ep-hero h1 {
-    font-size: 2rem;
-    font-weight: 600;
-    line-height: 1.1;
-    margin: 0.5rem 0 0.5rem;
-  }
-  .ep-hero p { color: rgba(240,236,228,0.55); font-size: 0.9rem; max-width: 60ch; }
-  .ep-hero-meta {
-    margin-top: 1rem;
-    display: flex;
-    gap: 1rem;
-    font-size: 0.6rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgba(240,236,228,0.4);
-  }
-  .ep-hero-meta a { color: rgba(255,1,0,0.8); text-decoration: none; }
-  .ep-hero-meta a:hover { color: #ff0100; }
 
   #episodes {
     max-width: 1600px;
@@ -117,7 +38,11 @@
   }
   .episode.is-playing { border-color: #ff0100; box-shadow: 0 0 20px rgba(255,1,0,0.25); }
 
-  .ep-art { height: 200px; overflow: hidden; background: #0a0a0a; position: relative; }
+  .ep-art {
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: #0a0a0a;
+  }
   .ep-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
   .ep-body { display: flex; flex-direction: column; gap: 0.4rem; padding: 0.9rem 1rem; background: #0a0a0a; flex: 1; }
@@ -142,38 +67,12 @@
     font-size: 0.85rem;
     line-height: 1.45;
     display: -webkit-box;
-    -webkit-line-clamp: 5;
+    -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
     margin: 0.3rem 0 0.5rem;
   }
   .ep-desc.expanded { display: block; }
-
-  .ep-player {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    height: 40px;
-    margin-top: auto;
-  }
-  .ep-player button {
-    background: none;
-    border: 1px solid rgba(255,1,0,0.5);
-    color: #ff0100;
-    width: 36px;
-    height: 36px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-    flex-shrink: 0;
-    transition: background 0.15s, color 0.15s;
-  }
-  .ep-player button:hover { background: #ff0100; color: #fff; }
-  .ep-progress { flex: 1; height: 3px; background: rgba(255,255,255,0.15); position: relative; cursor: pointer; }
-  .ep-progress-fill { height: 100%; background: #ff0100; width: 0%; pointer-events: none; }
-  .ep-time { font-size: 0.5rem; letter-spacing: 0.06em; color: rgba(240,236,228,0.5); min-width: 2.8rem; text-align: center; flex-shrink: 0; }
 
   .ep-readmore {
     background: none;
@@ -188,26 +87,26 @@
   }
   .ep-readmore:hover { color: #ff0100; }
 
+  .episode .podcast-player { margin-top: auto; }
+
   .ep-empty { grid-column: 1 / -1; text-align: center; color: rgba(240,236,228,0.4); padding: 4rem 0; }
 
   #loader { max-width: 1600px; margin: 2rem auto; padding: 0 2rem; }
 
   @media (max-width: 720px) {
-    .ep-hero { grid-template-columns: 1fr; align-items: start; }
-    .ep-hero img { width: 140px; height: 140px; }
-    .ep-hero h1 { font-size: 1.5rem; }
-    .ep-player { height: 32px; }
-    .ep-player button { width: 30px; height: 30px; font-size: 0.6rem; }
-    .ep-header { flex-direction: column; align-items: flex-start; gap: 0.8rem; }
+    #episodes { grid-template-columns: 1fr; gap: 2px; padding: 2px; }
+    .ep-art { aspect-ratio: 4 / 3; }
+    .ep-title { font-size: 1rem; }
   }
 </style>
 </head>
 <body>
 
+<a class="skip-link" href="#episodes">Saltar al contenido</a>
+
 <header>
   <div class="header-inner">
     <a class="logo" href="index.html" style="text-decoration:none;color:inherit">
-      <img src="pdv.png" alt="Punto de vista" class="logo-img">
       <span class="logo-text">Punto de vista</span>
     </a>
     <div class="header-controls" role="toolbar" aria-label="Controles de filtro">
@@ -222,15 +121,23 @@
   </div>
 </header>
 
-<div class="ep-hero">
-  <img id="cover" src="podcast-cover.png" alt="Punto de vista — podcast">
-  <div>
-    <span class="ep-hero-badge"><span class="ep-hero-dot"></span> Podcast</span>
-    <h1>Punto de vista</h1>
-    <p>Resumen diario en audio de inspiración fotográfica: Colossal, Lomography, Booooooom, The Photographic Journal, Swann Galleries y Huck Magazine.</p>
-    <div class="ep-hero-meta">
-      <span id="hero-count"></span>
-      <a href="podcast.xml">suscripción rss</a>
+<div id="podcast-hero" class="hide" aria-label="Podcast del día">
+  <div class="podcast-hero-inner">
+    <img id="podcast-hero-img" src="podcast-cover.png" alt="Punto de vista — podcast">
+    <div class="podcast-hero-body">
+      <span class="podcast-hero-badge"><span class="podcast-dot"></span> Podcast · Punto de vista</span>
+      <h1 id="podcast-hero-title"></h1>
+      <div class="podcast-hero-meta">
+        <span id="hero-count"></span>
+        <span id="podcast-hero-num"></span>
+        <a href="podcast.xml">suscripción rss</a>
+      </div>
+    </div>
+    <div class="podcast-player" id="podcast-hero-player" data-url="">
+      <button class="podcast-play" aria-label="Reproducir">▶</button>
+      <div class="podcast-progress"><div class="podcast-progress-fill"></div></div>
+      <span class="podcast-time">0:00 / --:--</span>
+      <input type="range" class="podcast-volume" min="0" max="1" step="0.05" value="1" aria-label="Volumen">
     </div>
   </div>
 </div>
@@ -277,14 +184,112 @@ function fmtDesc(desc) {
 
 const players = new Map();
 
+function bindPlayer(root) {
+  root.addEventListener('click', (e) => {
+    const btn = e.target.closest('.podcast-play');
+    if (btn) {
+      const player = btn.closest('.podcast-player');
+      if (!player) return;
+      const url = player.dataset.url;
+      let p = players.get(url);
+      if (!p) {
+        const audio = new Audio(url);
+        audio.preload = 'none';
+        const fill = player.querySelector('.podcast-progress-fill');
+        const time = player.querySelector('.podcast-time');
+        const card = player.closest('.episode');
+        audio.addEventListener('timeupdate', () => {
+          if (!audio.duration) return;
+          fill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+          time.textContent = fmtDur(Math.floor(audio.currentTime)) + ' / ' + fmtDur(Math.floor(audio.duration));
+        });
+        audio.addEventListener('loadedmetadata', () => { time.textContent = '0:00 / ' + fmtDur(Math.floor(audio.duration)); });
+        audio.addEventListener('ended', () => {
+          btn.textContent = '▶';
+          fill.style.width = '0%';
+          time.textContent = '0:00 / ' + fmtDur(Math.floor(audio.duration));
+          player.classList.remove('is-playing');
+          if (card) card.classList.remove('is-playing');
+        });
+        p = { audio, btn, fill, time, player, card };
+        players.set(url, p);
+      }
+      players.forEach((q) => {
+        if (q !== p && !q.audio.paused) {
+          q.audio.pause();
+          q.btn.textContent = '▶';
+          q.player.classList.remove('is-playing');
+          if (q.card) q.card.classList.remove('is-playing');
+        }
+      });
+      if (p.audio.paused) {
+        p.audio.play().catch(() => {});
+        btn.textContent = '⏸';
+        player.classList.add('is-playing');
+        if (p.card) p.card.classList.add('is-playing');
+      } else {
+        p.audio.pause();
+        btn.textContent = '▶';
+        player.classList.remove('is-playing');
+        if (p.card) p.card.classList.remove('is-playing');
+      }
+      return;
+    }
+
+    const progress = e.target.closest('.podcast-progress');
+    if (progress) {
+      const player = progress.closest('.podcast-player');
+      const p = player && players.get(player.dataset.url);
+      if (p && p.audio.duration) {
+        const r = progress.getBoundingClientRect();
+        p.audio.currentTime = ((e.clientX - r.left) / r.width) * p.audio.duration;
+      }
+      return;
+    }
+
+    const rm = e.target.closest('.ep-readmore');
+    if (rm) {
+      const desc = rm.closest('.ep-body').querySelector('.ep-desc');
+      const open = desc.classList.toggle('expanded');
+      rm.textContent = open ? 'ocultar resumen' : 'ver resumen';
+      rm.setAttribute('aria-expanded', String(open));
+    }
+  });
+
+  root.addEventListener('input', (e) => {
+    const vol = e.target.closest('.podcast-volume');
+    if (!vol) return;
+    const player = vol.closest('.podcast-player');
+    const p = player && players.get(player.dataset.url);
+    if (p && p.audio) p.audio.volume = parseFloat(vol.value);
+  });
+}
+
 function renderEpisodes(meta) {
   const el = document.getElementById('episodes');
   if (!meta || !meta.length) {
     el.innerHTML = '<div class="ep-empty">todavía no hay episodios</div>';
+    document.getElementById('loader').classList.add('hide');
     return;
   }
+
   const sorted = [...meta].sort((a, b) => String(b.date).localeCompare(String(a.date)));
   document.getElementById('hero-count').textContent = sorted.length + (sorted.length === 1 ? ' episodio' : ' episodios');
+
+  const latest = sorted[0];
+  const heroImg = document.getElementById('podcast-hero-img');
+  const heroTitle = document.getElementById('podcast-hero-title');
+  const heroNum = document.getElementById('podcast-hero-num');
+  const heroPlayer = document.getElementById('podcast-hero-player');
+  if (heroImg) heroImg.src = latest.image || COVER;
+  if (heroTitle) heroTitle.textContent = latest.podcast_title || 'Resumen diario';
+  if (heroNum) heroNum.textContent = 'episodio ' + sorted.length + ' · ' + fmtFecha(latest.date) + ' · ' + fmtDur(latest.duration);
+  if (heroPlayer) {
+    heroPlayer.dataset.url = RELEASE + '/podcast-' + latest.date + '.mp3';
+    const time = heroPlayer.querySelector('.podcast-time');
+    if (time) time.textContent = '0:00 / ' + fmtDur(latest.duration);
+  }
+  document.getElementById('podcast-hero').classList.remove('hide');
 
   el.innerHTML = sorted.map((e, i) => {
     const num = sorted.length - i;
@@ -299,70 +304,21 @@ function renderEpisodes(meta) {
         <h2 class="ep-title">${esc(title)}</h2>
         <div class="ep-desc">${fmtDesc(e.description)}</div>
         <button class="ep-readmore" type="button" aria-expanded="false">ver resumen</button>
-        <div class="ep-player" data-url="${RELEASE}/podcast-${e.date}.mp3">
-          <button class="ep-play" aria-label="Reproducir">▶</button>
-          <div class="ep-progress"><div class="ep-progress-fill"></div></div>
-          <span class="ep-time">0:00 / ${dur}</span>
+        <div class="podcast-player" data-url="${RELEASE}/podcast-${e.date}.mp3">
+          <button class="podcast-play" aria-label="Reproducir">▶</button>
+          <div class="podcast-progress"><div class="podcast-progress-fill"></div></div>
+          <span class="podcast-time">0:00 / ${dur}</span>
+          <input type="range" class="podcast-volume" min="0" max="1" step="0.05" value="1" aria-label="Volumen">
         </div>
       </div>
     </article>`;
   }).join('');
 
   document.getElementById('loader').classList.add('hide');
-  bindPlayers(el);
-}
-
-function bindPlayers(root) {
-  root.addEventListener('click', (e) => {
-    const btn = e.target.closest('.ep-play');
-    if (btn) {
-      const ep = btn.closest('.episode');
-      const url = ep.querySelector('.ep-player').dataset.url;
-      let p = players.get(url);
-      if (!p) {
-        const audio = new Audio(url);
-        audio.preload = 'none';
-        const progress = ep.querySelector('.ep-progress');
-        const fill = ep.querySelector('.ep-progress-fill');
-        const time = ep.querySelector('.ep-time');
-        audio.addEventListener('timeupdate', () => { if (!audio.duration) return; fill.style.width = (audio.currentTime / audio.duration * 100) + '%'; time.textContent = fmtDur(Math.floor(audio.currentTime)) + ' / ' + fmtDur(Math.floor(audio.duration)); });
-        audio.addEventListener('loadedmetadata', () => { time.textContent = '0:00 / ' + fmtDur(Math.floor(audio.duration)); });
-        audio.addEventListener('ended', () => { btn.textContent = '▶'; fill.style.width = '0%'; time.textContent = '0:00 / ' + fmtDur(Math.floor(audio.duration)); ep.classList.remove('is-playing'); });
-        progress.addEventListener('click', (ev) => {
-          if (!audio.duration) return;
-          const r = progress.getBoundingClientRect();
-          audio.currentTime = ((ev.clientX - r.left) / r.width) * audio.duration;
-        });
-        p = { audio, btn, fill, time, ep };
-        players.set(url, p);
-      }
-      // pausar el resto
-      players.forEach((q) => {
-        if (q !== p && !q.audio.paused) { q.audio.pause(); q.btn.textContent = '▶'; q.ep.classList.remove('is-playing'); }
-      });
-      if (p.audio.paused) {
-        p.audio.play().catch(() => {});
-        btn.textContent = '⏸';
-        ep.classList.add('is-playing');
-      } else {
-        p.audio.pause();
-        btn.textContent = '▶';
-        ep.classList.remove('is-playing');
-      }
-      return;
-    }
-
-    const rm = e.target.closest('.ep-readmore');
-    if (rm) {
-      const desc = rm.closest('.ep-body').querySelector('.ep-desc');
-      const open = desc.classList.toggle('expanded');
-      rm.textContent = open ? 'ocultar resumen' : 'ver resumen';
-      rm.setAttribute('aria-expanded', String(open));
-    }
-  });
 }
 
 (async () => {
+  bindPlayer(document.body);
   try {
     const resp = await fetch('podcast_meta.json', { cache: 'no-store' });
     const meta = await resp.json();
