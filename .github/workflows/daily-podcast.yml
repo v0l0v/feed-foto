@@ -24,7 +24,10 @@ jobs:
           python-version: '3.12'
 
       - name: Instalar dependencias
-        run: pip install requests edge-tts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          pip install requests edge-tts
 
       - name: Configurar git
         run: |
