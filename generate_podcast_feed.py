@@ -53,7 +53,8 @@ def item_lines(entry, num):
     date_str = entry['date']
     d = datetime.strptime(date_str, '%Y-%m-%d')
     pub = format_datetime(datetime(d.year, d.month, d.day, 5, 0, 0, tzinfo=timezone.utc))
-    title = f'Episodio {num} · {fmt_es(date_str)}'
+    ptitle = (entry.get('podcast_title') or '').strip()
+    title = f'Episodio {num} · {ptitle}' if ptitle else f'Episodio {num} · {fmt_es(date_str)}'
     desc = entry.get('description') or ''
     art = entry.get('image') or COVER
     dur = fmt_duration(entry.get('duration'))

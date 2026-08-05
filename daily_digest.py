@@ -1,5 +1,6 @@
 import json
 import os
+import random
 import re
 import urllib.request
 from datetime import date, datetime
@@ -213,14 +214,16 @@ def process_rss_item(a, label):
     }
 
 
-IMAGE_PRIORITY = ['lomography', 'colossal', 'booooooom', 'swan', 'tpj', 'huck']
-
 def pick_day_image(items_by_source):
-    for key in IMAGE_PRIORITY:
+    candidates = []
+    for key in SOURCES:
         for item in items_by_source.get(key) or []:
-            if item.get('image'):
-                return item['image'].split('?')[0]
-    return ''
+            img = item.get('image') or ''
+            if img:
+                candidates.append(img.split('?')[0])
+    if not candidates:
+        return ''
+    return random.choice(candidates)
 
 def render_html(items_by_source):
     total = sum(len(v) for v in items_by_source.values())
