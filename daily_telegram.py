@@ -170,6 +170,62 @@ def clean_text(t):
     return t
 
 
+def clean_caption(t, title=''):
+    t = re.sub(r'!\[[^\]]*\]\([^)]+\)', '', t)
+    t = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', t)
+    t = re.sub(r'<\/?[^>]+>', '', t)
+    t = re.sub(r'\*\*(.+?)\*\*', r'\1', t)
+    t = re.sub(r'\*(.+?)\*', r'\1', t)
+    t = re.sub(r'[_~`]', '', t)
+    t = re.sub(r'&#8217;', "'", t)
+    t = re.sub(r'&#8211;', '–', t)
+    t = re.sub(r'&#\d+;', '', t)
+    t = t.replace('\\', '')
+    t = re.sub(r'^---+\s*[A-ZÁÉÍÓÚÑ]+\s*---*\s*$', '', t, flags=re.M)
+    lines = [re.sub(r'\s+', ' ', ln).strip() for ln in t.split('\n')]
+    out = []
+    blank = False
+    for ln in lines:
+        if ln:
+            out.append(ln)
+            blank = False
+        elif not blank:
+            out.append('')
+            blank = True
+    t = '\n'.join(out).strip()
+    if title:
+        t = re.sub(r'^\s*' + re.escape(title) + r'\s*(?:[—\-–]\s*)?', '', t, count=1)
+    return t
+
+
+def parse_summary(summary):
+    podcast_title = ''
+    resumen = ''
+    locutable = summary
+    remaining = summary
+    if TITLE_MARKER in summary:
+        pre, post = summary.split(TITLE_MARKER, 1)
+        podcast_title = pre.strip()
+        remaining = post
+    loc_parts = remaining.split(LOCUTABLE_MARKER, 1)
+    if len(loc_parts) == 2:
+        locutable = loc_parts[1].strip()
+        resumen = loc_parts[0].strip()
+    else:
+        resumen = remaining.strip()
+    if not podcast_title and resumen:
+        for ln in resumen.split('\n'):
+            ln = ln.strip()
+            if not ln:
+                continue
+            if re.match(r'^---+', ln):
+                continue
+            podcast_title = ln
+            break
+    return podcast_title, resumen, locutable
+
+
+
 TITLE_MARKER = '---TITLE---'
 LOCUTABLE_MARKER = '---LOCUTABLE---'
 
@@ -229,26 +285,7 @@ def main():
 
     print(f'  Resumen generado ({len(summary)} chars)')
 
-    podcast_title = ''
-    locutable = summary
-    resumen = ''
-    title_parts = summary.split(TITLE_MARKER, 1)
-    if len(title_parts) == 2:
-        podcast_title = title_parts[0].strip()
-        remaining = title_parts[1]
-        loc_parts = remaining.split(LOCUTABLE_MARKER, 1)
-        if len(loc_parts) == 2:
-            locutable = loc_parts[1].strip()
-            resumen = loc_parts[0].strip()
-        else:
-            resumen = remaining
-    else:
-        loc_parts = summary.split(LOCUTABLE_MARKER, 1)
-        if len(loc_parts) == 2:
-            locutable = loc_parts[1].strip()
-            resumen = loc_parts[0].strip()
-        else:
-            resumen = summary
+    podcast_title, resumen, locutable = parse_summary(summary)
 
     print('  Generando audio...')
     clean_text_audio = clean_text(locutable)
@@ -261,7 +298,7 @@ def main():
         size = os.path.getsize(audio_path)
         print(f'  Audio generado ({size/1024:.0f} KB)')
 
-        description = clean_text(resumen)
+        description = clean_caption(resumen, clean_text(podcast_title))
 
         duration = 0
         try:
@@ -321,7 +358,7 @@ def main():
         if podcast_title:
             audio_caption += f'\n{clean_text(podcast_title)}'
         if resumen:
-            audio_caption += f'\n\n{clean_text(resumen)}'
+            audio_caption += f'\n\n{clean_caption(resumen, clean_text(podcast_title))}'
         if len(audio_caption) > 1024:
             audio_caption = audio_caption[:1021] + '...'
         audio_filename = f'Punto de vista - {today.isoformat()}.mp3'
