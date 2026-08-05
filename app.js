@@ -189,6 +189,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // ── Fila Podcast (fuente fija, primera e inamovible) ────────────────
+  const podRow = document.querySelector('.source-row[data-src="podcast"]');
+  if (podRow) {
+    podRow.querySelector('input').addEventListener('change', (e) => {
+      if (e.target.checked) __sources.add('podcast');
+      else __sources.delete('podcast');
+      saveSources();
+      applyFilter();
+    });
+    podRow.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      e.preventDefault();
+      if (__sources.size === 1 && __sources.has('podcast')) {
+        __sources.clear();
+      } else {
+        __sources.clear();
+        __sources.add('podcast');
+      }
+      saveSources();
+      applyFilter();
+    });
+  }
+
   loadSources();
   sortSourcesUI();
   loadFeeds();
@@ -1658,7 +1681,7 @@ function sortSourcesUI() {
   const panel = document.getElementById('sources-panel');
   if (!panel) return;
   const counts = getReadCounts();
-  const rows = Array.from(panel.querySelectorAll('.source-row:not(.all)'));
+  const rows = Array.from(panel.querySelectorAll('.source-row:not(.all):not([data-src="podcast"])'));
   
   rows.sort((a, b) => {
     const srcA = a.dataset.src;
