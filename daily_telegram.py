@@ -65,9 +65,19 @@ def gemini_request(prompt):
             return text.strip()
         except urllib.error.HTTPError as e:
             err = e.read().decode()
-            if 'quota' in err.lower() or 'RESOURCE_EXHAUSTED' in err:
+            retryable = (
+                e.code >= 500
+                or 'quota' in err.lower()
+                or 'RESOURCE_EXHAUSTED' in err
+                or 'UNAVAILABLE' in err
+            )
+            if retryable and attempt < MAX_RETRIES - 1:
                 wait = RETRY_DELAY * (attempt + 1)
-                print(f'  Cuota excedida, reintentando en {wait}s...')
+                if 'quota' in err.lower() or 'RESOURCE_EXHAUSTED' in err:
+                    reason = 'Cuota excedida'
+                else:
+                    reason = f'Error {e.code}'
+                print(f'  {reason}, reintentando en {wait}s...')
                 time.sleep(wait)
                 continue
             print(f'  Error API: {err[:300]}')
@@ -75,7 +85,7 @@ def gemini_request(prompt):
         except (urllib.error.URLError, json.JSONDecodeError, KeyError) as e:
             print(f'  Error: {e}')
             return None
-    print('  Se agotaron los reintentos por cuota.')
+    print('  Se agotaron los reintentos.')
     return None
 
 
