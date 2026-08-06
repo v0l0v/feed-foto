@@ -6,7 +6,7 @@
 <atom:link href="https://v0l0v.github.io/puntodevista/podcast.xml" rel="self" type="application/rss+xml"/>
 <description>Resumen diario en audio de inspiración fotográfica: Colossal, Lomography Magazine, Booooooom, The Photographic Journal, Swann Galleries y Huck Magazine.</description>
 <language>es</language>
-<lastBuildDate>Wed, 05 Aug 2026 22:34:31 +0000</lastBuildDate>
+<lastBuildDate>Thu, 06 Aug 2026 16:35:31 +0000</lastBuildDate>
 <image><url>https://v0l0v.github.io/puntodevista/podcast-cover.png</url><title>Punto de vista — podcast diario</title><link>https://v0l0v.github.io/puntodevista/</link></image>
 <itunes:image href="https://v0l0v.github.io/puntodevista/podcast-cover.png"/>
 <itunes:author>Punto de vista</itunes:author>
@@ -40,6 +40,58 @@
     <itunes:title>Episodio 2 · Entre sueños, sombras y recuerdos: El arte de capturar lo invisible</itunes:title>
     <itunes:author>Punto de vista</itunes:author>
     <itunes:summary><![CDATA[Entre sueños, sombras y recuerdos: El arte de capturar lo invisible --- Night Journey de Susan kae Grant Un viaje fascinante al mundo del inconsciente a través de siluetas y sombras que recrean visiones del ciclo REM. Estas fotografías nos invitan a explorar la delgada línea entre la realidad y el sueño, recordándonos que nuestra mente es la cámara más poderosa que existe. Mario Giovanni y la Diana F+ El reconocido fotógrafo de moda Mario Giovanni nos enseña a abrazar el caos y la imperfección de la fotografía analógica. Al cambiar el control digital por la imprevisibilidad de una cámara de plástico, descubre que los momentos más memorables son aquellos que no se pueden planificar. Las historias de la abuela Kinso y Yan-Han A sus 96 años, esta "influencer" taiwanesa utiliza la fotografía instantánea para rescatar su lengua materna y preservar sus memorias. Un recordatorio conmovedor de que una foto física tiene el poder de despertar recuerdos olvidados y unir a distintas generaciones. Pâle de Gabrielle Duplantier Un recorrido visual inventado por la mente, donde las imágenes y los recuerdos se entrelazan en una atmósfera etérea. Esta obra nos inspira a fotografiar no solo lo que vemos, sino los paisajes internos que habitan nuestra memoria.]]></itunes:summary>
+    <itunes:explicit>false</itunes:explicit>
+  </item>
+  <item>
+    <title>Episodio 3 · Miradas de barrio: de los gatos de Nueva York al orgullo Chicano</title>
+    <link>https://v0l0v.github.io/puntodevista/</link>
+    <guid isPermaLink="true">https://github.com/v0l0v/puntodevista/releases/download/episodios/podcast-2026-08-05.mp3</guid>
+    <pubDate>Wed, 05 Aug 2026 05:00:00 +0000</pubDate>
+    <description><![CDATA[Bodega Cats of New York
+Un homenaje visual a los felinos que custodian las tiendas de Nueva York, capturados por Gulce Kilkis. Este proyecto no solo celebra su presencia icónica, sino que aboga por su protección legal como parte esencial del alma de la ciudad.
+
+Tom y la Lomo MC-A
+El fotógrafo tailandés Tom nos invita a recuperar el ritmo de la fotografía analógica con la nueva Lomo MC-A. Sus retratos vibrantes demuestran que la espontaneidad y la conexión con el momento son más importantes que cualquier ajuste técnico.
+
+The Calling of The Steppes
+La fotógrafa Alina Bobrova presenta una serie que nos transporta a la inmensidad de las estepas. Una obra que destaca por su capacidad de capturar la atmósfera y el misterio de paisajes remotos.
+
+Chicano Camera Culture
+Una exposición histórica en "The Cheech" que recorre seis décadas de fotografía méxico-estadounidense. A través de la "mirada chicana", los artistas documentan su propia resistencia, identidad y vida cotidiana frente a la narrativa externa.
+
+URBAN Photo Awards – Finalistas
+Ya se han anunciado los finalistas de la decimoséptima edición de este prestigioso certamen internacional. Una oportunidad única para inspirarse con las mejores capturas de la vida urbana contemporánea alrededor del mundo.
+
+SACA 1504 de Manuel Naranjo Martell
+Este fotolibro explora las raíces de la cultura ecuestre en América a través de rituales ancestrales. Una documentación visual profunda sobre la relación histórica y espiritual entre el ser humano y el caballo.
+
+Convocatorias y Formación
+El sector fotográfico se dinamiza con las becas de la Lucie Foundation, el premio UPP para mujeres fotógrafas y talleres exclusivos. Destaca el workshop de Christopher Morris en Trieste, una cita imperdible para perfeccionar la visión documental.]]></description>
+    <enclosure url="https://github.com/v0l0v/puntodevista/releases/download/episodios/podcast-2026-08-05.mp3" length="624816" type="audio/mpeg"/>
+    <itunes:image href="https://v0l0v.github.io/puntodevista/podcast-cover.png"/>
+    <itunes:duration>1:44</itunes:duration>
+    <itunes:title>Episodio 3 · Miradas de barrio: de los gatos de Nueva York al orgullo Chicano</itunes:title>
+    <itunes:author>Punto de vista</itunes:author>
+    <itunes:summary><![CDATA[Bodega Cats of New York
+Un homenaje visual a los felinos que custodian las tiendas de Nueva York, capturados por Gulce Kilkis. Este proyecto no solo celebra su presencia icónica, sino que aboga por su protección legal como parte esencial del alma de la ciudad.
+
+Tom y la Lomo MC-A
+El fotógrafo tailandés Tom nos invita a recuperar el ritmo de la fotografía analógica con la nueva Lomo MC-A. Sus retratos vibrantes demuestran que la espontaneidad y la conexión con el momento son más importantes que cualquier ajuste técnico.
+
+The Calling of The Steppes
+La fotógrafa Alina Bobrova presenta una serie que nos transporta a la inmensidad de las estepas. Una obra que destaca por su capacidad de capturar la atmósfera y el misterio de paisajes remotos.
+
+Chicano Camera Culture
+Una exposición histórica en "The Cheech" que recorre seis décadas de fotografía méxico-estadounidense. A través de la "mirada chicana", los artistas documentan su propia resistencia, identidad y vida cotidiana frente a la narrativa externa.
+
+URBAN Photo Awards – Finalistas
+Ya se han anunciado los finalistas de la decimoséptima edición de este prestigioso certamen internacional. Una oportunidad única para inspirarse con las mejores capturas de la vida urbana contemporánea alrededor del mundo.
+
+SACA 1504 de Manuel Naranjo Martell
+Este fotolibro explora las raíces de la cultura ecuestre en América a través de rituales ancestrales. Una documentación visual profunda sobre la relación histórica y espiritual entre el ser humano y el caballo.
+
+Convocatorias y Formación
+El sector fotográfico se dinamiza con las becas de la Lucie Foundation, el premio UPP para mujeres fotógrafas y talleres exclusivos. Destaca el workshop de Christopher Morris en Trieste, una cita imperdible para perfeccionar la visión documental.]]></itunes:summary>
     <itunes:explicit>false</itunes:explicit>
   </item>
 </channel>
